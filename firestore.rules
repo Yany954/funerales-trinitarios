@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regla general: cualquier persona autenticada del staff puede LEER,
+    // pero NADIE escribe directo desde el cliente (React o el bot).
+    // Toda escritura pasa por Cloud Functions (backend/src/interfaces/admin-api),
+    // que es lo único que corre con el Admin SDK y se salta estas reglas.
+    // Esto es lo que hace confiable el campo metadata.modificadoPor:
+    // si el cliente pudiera escribir directo, podría mentir sobre quién hizo el cambio.
+
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

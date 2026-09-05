@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply font-sans text-tinta antialiased;
+}
+
+h1, h2, h3 {
+  @apply font-display;
+}

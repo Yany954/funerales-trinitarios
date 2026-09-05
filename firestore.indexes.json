@@ -1,0 +1,28 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "servicios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "convenioId", "order": "ASCENDING" },
+        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "servicios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sede", "order": "ASCENDING" },
+        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "personas_cubiertas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cedula", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

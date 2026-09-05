@@ -1,0 +1,13 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fotos de cofres, flores, documentos adjuntos a servicios.
+    // Lectura: cualquier staff autenticado. Escritura: solo desde el backend
+    // (Cloud Functions con Admin SDK) para mantener el mismo principio que Firestore.
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

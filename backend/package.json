@@ -1,0 +1,28 @@
+{
+  "name": "funeraria-trinitarios-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud Functions (admin-api) para el sistema de Funerales Los Trinitarios S.A.S.",
+  "main": "lib/interfaces/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
+    "deploy": "firebase deploy --only functions",
+    "lint": "eslint src --ext .ts",
+    "test": "echo \"agregar tests en /tests cuando el equipo lo necesite\" && exit 0"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "eslint": "^8.57.0"
+  }
+}
