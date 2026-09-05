@@ -5,3 +5,4 @@ frontend/.env.local
 *-debug.log
 .firebase/
 .firebaserc
+emulator-data/
