@@ -9,6 +9,8 @@
 
 export { crearAfiliadoFn, buscarPersonaCubiertaFn } from "./admin-api/afiliados";
 
+export { actualizarEstadosBovedasFn } from "./scheduled/actualizar-estados-bovedas";
+export { registrarBovedaFn, listarBovedasPorEstadoFn } from "./admin-api/bovedas";
 // TODO — siguientes módulos, mismo patrón que afiliados:
 // export { crearServicioFn, generarReporteFn } from "./admin-api/servicios";
 // export { crearConvenioFn, actualizarTarifaFn } from "./admin-api/convenios";

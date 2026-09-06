@@ -2,6 +2,7 @@ node_modules/
 backend/lib/
 frontend/dist/
 frontend/.env.local
+frontend/.env.example
 *-debug.log
 .firebase/
 .firebaserc

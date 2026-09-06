@@ -18,9 +18,6 @@ const runningLocally =
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  // When served from the local hosting emulator, the built app may still
-  // contain production env vars. Force the emulator project id so functions
-  // calls target the local emulator endpoints (see firebase-debug.log).
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? (runningLocally ? "trinitarios-dab7b" : ""),
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
