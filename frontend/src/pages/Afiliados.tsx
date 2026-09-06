@@ -1,9 +1,10 @@
 import { useEffect, useState, FormEvent } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { Search, UserPlus } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
 import type { Afiliado, PersonaCubierta } from "../types";
+import { useRol } from "../auth/RolContext";
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
@@ -16,16 +17,20 @@ export default function Afiliados() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { rol, sedeAsignada, sedeSeleccionada } = useRol();
 
   // Lectura en tiempo real — solo lectura, ver nota en api/client.ts
   useEffect(() => {
-    const q = query(collection(db, "afiliados"), orderBy("nombreCompleto"));
+    const base = collection(db, "afiliados");
+    const q = sedeSeleccionada === "all"
+      ? query(base, orderBy("nombreCompleto"))
+      : query(base, where("sede", "==", sedeSeleccionada), orderBy("nombreCompleto"));
     const unsub = onSnapshot(q, (snap) => {
       setAfiliados(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Afiliado)));
       setCargando(false);
     });
     return unsub;
-  }, []);
+  }, [sedeSeleccionada]);
 
   async function manejarBusqueda(e: FormEvent) {
     e.preventDefault();
@@ -133,6 +138,17 @@ export default function Afiliados() {
               <option value="bendiciones">Bendiciones — $32.000/mes</option>
               <option value="integral">Integral — $38.000/mes</option>
             </select>
+            {rol === "admin" ? (
+              <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+                <option value="">Sede…</option>
+                <option value="Pailitas">Pailitas</option>
+                <option value="Tamalameque">Tamalameque</option>
+                <option value="Pelaya">Pelaya</option>
+                <option value="Curumaní">Curumaní</option>
+              </select>
+            ) : (
+              <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
+            )}
             <label className="flex items-center gap-2 text-sm text-tinta/70">
               <input type="checkbox" name="tieneSeguroVida" />
               Tiene seguro de vida
@@ -158,13 +174,12 @@ export default function Afiliados() {
             encabezado: "Estado",
             render: (a: Afiliado) => (
               <span
-                className={`rounded-full px-2.5 py-1 text-xs ${
-                  a.estadoPlan === "activo"
-                    ? "bg-green-50 text-green-700"
-                    : a.estadoPlan === "en mora"
+                className={`rounded-full px-2.5 py-1 text-xs ${a.estadoPlan === "activo"
+                  ? "bg-green-50 text-green-700"
+                  : a.estadoPlan === "en mora"
                     ? "bg-amber-50 text-amber-700"
                     : "bg-tinta/5 text-tinta/60"
-                }`}
+                  }`}
               >
                 {a.estadoPlan}
               </span>

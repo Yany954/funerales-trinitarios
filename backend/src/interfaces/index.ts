@@ -14,3 +14,5 @@ export { registrarBovedaFn, listarBovedasPorEstadoFn } from "./admin-api/bovedas
 // TODO — siguientes módulos, mismo patrón que afiliados:
 // export { crearServicioFn, generarReporteFn } from "./admin-api/servicios";
 // export { crearConvenioFn, actualizarTarifaFn } from "./admin-api/convenios";
+export { asignarRolFn } from "./admin-api/usuarios";
+export { registrarServicioFn } from "./admin-api/servicios";

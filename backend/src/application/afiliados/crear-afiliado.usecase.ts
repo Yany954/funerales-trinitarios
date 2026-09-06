@@ -1,4 +1,5 @@
 import { Afiliado } from "../../domain/entities/afiliado";
+import { Sede } from "../../domain/entities/servicio";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
 
@@ -6,6 +7,7 @@ export interface CrearAfiliadoInput {
   nombreCompleto: string;
   cedula: string;
   planId: string;
+  sede: Sede;
   beneficiarios: Afiliado["beneficiarios"];
   tieneSeguroVida: boolean;
   aseguradora?: string;
@@ -35,6 +37,7 @@ export async function crearAfiliado(
     aseguradora: input.aseguradora,
     observaciones: input.observaciones,
     metadata,
+    sede: input.sede,
   };
 
   const creado = await repo.crear(nuevo);

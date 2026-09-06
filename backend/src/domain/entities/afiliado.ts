@@ -1,4 +1,5 @@
 import { MetadataCambio } from "../value-objects/metadata-cambio";
+import { Sede } from "../value-objects/rol-usuario";
 
 export interface Beneficiario {
   nombre: string;
@@ -20,6 +21,7 @@ export interface Afiliado {
   planId: string;
   estadoPlan: "activo" | "inactivo" | "en mora";
   fechaAfiliacion: Date;
+  sede: Sede;
   beneficiarios: Beneficiario[];
   ultimoPago: UltimoPago | null;
   tieneSeguroVida: boolean;

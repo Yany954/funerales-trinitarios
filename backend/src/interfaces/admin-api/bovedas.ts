@@ -17,9 +17,8 @@ export const registrarBovedaFn = onCall<RegistrarBovedaInput>(async (request) =>
 });
 
 /** El dashboard (y en el futuro el bot de WhatsApp) llama esto para saber si alguien tiene plan. */
-/** El dashboard (y en el futuro el bot de WhatsApp) llama esto para saber si alguien tiene plan. */
 export const listarBovedasPorEstadoFn = onCall<{ estado: EstadoBoveda }>(async (request) => {
-  const uid = requireAuth(request);
+  requireAuth(request);
   const bovedas = await listarBovedasPorEstado(repo, request.data.estado);
   return { bovedas };
 });

@@ -4,23 +4,52 @@
       "collectionGroup": "servicios",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "convenioId", "order": "ASCENDING" },
-        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+        {
+          "fieldPath": "convenioId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaServicio",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "servicios",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "sede", "order": "ASCENDING" },
-        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+        {
+          "fieldPath": "sede",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaServicio",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "personas_cubiertas",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "cedula", "order": "ASCENDING" }
+        {
+          "fieldPath": "cedula",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "afiliados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sede",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombreCompleto",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

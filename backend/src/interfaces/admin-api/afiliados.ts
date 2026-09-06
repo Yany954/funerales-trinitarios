@@ -1,4 +1,4 @@
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { requireAuth } from "../../infrastructure/auth/rbac";
 import { AfiliadosRepositoryFirestore } from "../../infrastructure/firebase/afiliados.repository.firestore";
 import { crearAfiliado, CrearAfiliadoInput } from "../../application/afiliados/crear-afiliado.usecase";
@@ -10,6 +10,9 @@ const repo = new AfiliadosRepositoryFirestore();
 /** El dashboard llama esto para crear un afiliado nuevo. */
 export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   const uid = requireAuth(request);
+  if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
+    throw new HttpsError("permission-denied", "No puedes crear afiliados fuera de tu sede.");
+  }
   const afiliado = await crearAfiliado(repo, request.data, metadataHumano(uid));
   return { afiliado };
 });

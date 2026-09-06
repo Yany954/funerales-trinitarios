@@ -95,3 +95,25 @@ export async function buscarPersonaCubierta(termino: string): Promise<PersonaCub
   const res = await fn({ termino });
   return res.data.resultados;
 }
+
+import type { RegistrarBovedaInput, Boveda, EstadoBoveda } from "../types";
+
+export async function registrarBoveda(input: RegistrarBovedaInput): Promise<Boveda> {
+  const fn = httpsCallable<RegistrarBovedaInput, { boveda: Boveda }>(functions, "registrarBovedaFn");
+  const res = await fn(input);
+  return res.data.boveda;
+}
+
+export async function listarBovedasPorEstado(estado?: EstadoBoveda): Promise<Boveda[]> {
+  const fn = httpsCallable<{ estado?: EstadoBoveda }, { bovedas: Boveda[] }>(functions, "listarBovedasPorEstadoFn");
+  const res = await fn({ estado });
+  return res.data.bovedas;
+}
+
+import type { RegistrarServicioInput, Servicio } from "../types";
+
+export async function registrarServicio(input: RegistrarServicioInput): Promise<Servicio> {
+  const fn = httpsCallable<RegistrarServicioInput, { servicio: Servicio }>(functions, "registrarServicioFn");
+  const res = await fn(input);
+  return res.data.servicio;
+}

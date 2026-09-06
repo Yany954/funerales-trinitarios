@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 import type { User } from "firebase/auth";
 import { alCambiarSesion, iniciarSesion } from "./api/client";
 import { router } from "./router";
+import { RolProvider } from "./auth/RolContext";
 
 function PantallaLogin() {
   const [error, setError] = useState<string | null>(null);
@@ -70,5 +71,9 @@ export default function App() {
   if (cargandoSesion) return null; // evita el parpadeo de la pantalla de login
   if (!usuario) return <PantallaLogin />;
 
-  return <RouterProvider router={router} />;
+  return (
+    <RolProvider user={usuario}>
+      <RouterProvider router={router} />
+    </RolProvider>
+  );
 }

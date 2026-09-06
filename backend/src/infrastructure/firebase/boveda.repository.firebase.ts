@@ -5,11 +5,6 @@ import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 
 const BOVEDAS = "bovedas";
 
-function calcularFechaLimite(fechaInicio: Date): Date {
-  const fechaLimite = new Date(fechaInicio);
-  fechaLimite.setFullYear(fechaLimite.getFullYear() + 4);
-  return fechaLimite;
-}
 function aFirestore(boveda: Omit<Boveda, "id">) {
   return {
     ...boveda,
@@ -21,6 +16,7 @@ function aFirestore(boveda: Omit<Boveda, "id">) {
     },
   };
 }
+
 function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Boveda {
   return {
     id,
@@ -30,56 +26,38 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Boveda {
     metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
   } as Boveda;
 }
+
 export class BovedaRepositoryFirestore implements BovedaRepository {
-  async crear(
-    servicioId: string,
-    zona: string,
-    fechaInicio: Date,
-    valorArriendo: number,
-    incluyeExhumacion: boolean,
-    metadata: MetadataCambio
-  ): Promise<Boveda> {
-    const fechaLimite = calcularFechaLimite(fechaInicio);
-    const estado: EstadoBoveda = "vigente";
-    const bovedaData: Omit<Boveda, "id"> = {
-      servicioId,
-      zona,
-      fechaInicio,
-      fechaLimite,
-      valorArriendo,
-      incluyeExhumacion,
-      metadata,
-      estado,
-    };
+  async crear(bovedaData: Omit<Boveda, "id">): Promise<Boveda> {
     const ref = await db.collection(BOVEDAS).add(aFirestore(bovedaData));
     return { id: ref.id, ...bovedaData };
   }
 
-    async listarEstado(estado: EstadoBoveda): Promise<Boveda[]> {
-      const snapshot = await db.collection(BOVEDAS).where("estado", "==", estado).get();
-      return snapshot.docs.map((d) => deFirestore(d.id, d.data()));
-    }
+  async listarEstado(estado: EstadoBoveda): Promise<Boveda[]> {
+    const snapshot = await db.collection(BOVEDAS).where("estado", "==", estado).get();
+    return snapshot.docs.map((d) => deFirestore(d.id, d.data()));
+  }
 
-    async actualizar(boveda: Boveda): Promise<void> {
-      const ref = db.collection(BOVEDAS).doc(boveda.id);
-      const {id, ...data} = boveda;
-      await ref.update(aFirestore(data));
-    }
+  async actualizar(boveda: Boveda): Promise<void> {
+    const ref = db.collection(BOVEDAS).doc(boveda.id);
+    const { id, ...data } = boveda;
+    await ref.update(aFirestore(data));
+  }
 
-    async eliminar(id: string): Promise<void> {
-      const ref = db.collection(BOVEDAS).doc(id);
-      await ref.delete();
-    }
+  async eliminar(id: string): Promise<void> {
+    const ref = db.collection(BOVEDAS).doc(id);
+    await ref.delete();
+  }
 
-    async actualizarEstado(
-      bovedaId: string,
-      nuevoEstado: EstadoBoveda,
-      metadata: MetadataCambio
-    ): Promise<void> {
-      const ref = db.collection(BOVEDAS).doc(bovedaId);
-      await ref.update({
-        estado: nuevoEstado,
-        metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
-      });
-    }
+  async actualizarEstado(
+    bovedaId: string,
+    nuevoEstado: EstadoBoveda,
+    metadata: MetadataCambio
+  ): Promise<void> {
+    const ref = db.collection(BOVEDAS).doc(bovedaId);
+    await ref.update({
+      estado: nuevoEstado,
+      metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
+    });
+  }
 }

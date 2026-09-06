@@ -1,5 +1,8 @@
 import { Menu, LogOut } from "lucide-react";
 import { cerrarSesion } from "../api/client";
+import { useRol } from "../auth/RolContext";
+const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
+
 
 interface Props {
   titulo: string;
@@ -8,6 +11,8 @@ interface Props {
 }
 
 export default function Topbar({ titulo, onAbrirMenu, correoUsuario }: Props) {
+  const { rol, sedeSeleccionada, setSedeSeleccionada } = useRol();
+
   return (
     <header className="flex items-center justify-between border-b border-vino-100 bg-white px-4 py-4 md:px-8">
       <div className="flex items-center gap-3">
@@ -20,6 +25,18 @@ export default function Topbar({ titulo, onAbrirMenu, correoUsuario }: Props) {
         </button>
         <h1 className="font-display text-xl text-vino-900">{titulo}</h1>
       </div>
+      {rol === "admin" && (
+        <select
+          value={sedeSeleccionada}
+          onChange={(e) => setSedeSeleccionada(e.target.value as any)}
+          className="rounded-md border border-vino-100 px-2 py-1.5 text-sm text-vino-700"
+        >
+          <option value="all">Todas las sedes</option>
+          {SEDES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      )}
 
       {correoUsuario && (
         <div className="flex items-center gap-3 text-sm text-tinta/70">
