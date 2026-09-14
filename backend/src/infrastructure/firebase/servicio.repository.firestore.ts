@@ -31,4 +31,23 @@ export class ServiciosRepositoryFirestore implements ServiciosRepository {
     const snap = await db.collection(SERVICIOS).where("sede", "==", sede).get();
     return snap.docs.map((d) => deFirestore(d.id, d.data()));
   }
+  async buscarPorConvenio(convenioId: string, desde: Date, hasta: Date): Promise<Servicio[]> {
+    const snap = await db.collection(SERVICIOS)
+      .where("convenioId", "==", convenioId)
+      .where("fechaServicio", ">=", Timestamp.fromDate(desde))
+      .where("fechaServicio", "<=", Timestamp.fromDate(hasta))
+      .get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
+
+  async buscarPorSedeYConvenios(sede: string, convenioIds: string[], desde: Date, hasta: Date): Promise<Servicio[]> {
+    if (convenioIds.length === 0) return [];
+    const snap = await db.collection(SERVICIOS)
+      .where("sede", "==", sede)
+      .where("convenioId", "in", convenioIds.slice(0, 10)) // límite de Firestore para "in"
+      .where("fechaServicio", ">=", Timestamp.fromDate(desde))
+      .where("fechaServicio", "<=", Timestamp.fromDate(hasta))
+      .get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
 }
