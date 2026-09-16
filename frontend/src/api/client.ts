@@ -5,13 +5,29 @@ import {
   signOut,
   onAuthStateChanged,
   connectAuthEmulator,
+  sendPasswordResetEmail,
   User,
 } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
-// Detect local hosting/emulator environment early so we can override
-// configuration values (projectId) that affect the functions URL.
+import type { CrearAfiliadoInput, PersonaCubierta, Afiliado } from "../types";
+import type { RegistrarBovedaInput, Boveda, EstadoBoveda } from "../types";
+import type { RegistrarServicioInput, Servicio } from "../types";
+import type { CrearConvenioInput, GuardarTarifaInput, Convenio } from "../types";
+import type { CrearTipoCofreInput, TipoCofre } from "../types";
+import type { CrearPlanInput, PlanFunerario } from "../types";
+import type { CrearFlorInput, Flor } from "../types";
+import type { ActualizarInventarioInput, InventarioCofre } from "../types";
+import type { GenerarReporteInput, FilaReporte } from "../types";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+import type { ActualizarTipoCofreInput } from "../types";
+import type { ActualizarServicioInput } from "../types";
+import type { RegistrarPagoInput, Pago } from "../types";
+import type { UsuarioListado, CrearUsuarioInput } from "../types";
+import type { ActualizarFlorInput } from "../types";
+
+
 const runningLocally =
   import.meta.env.DEV || location.hostname === "127.0.0.1" || location.hostname === "localhost";
 
@@ -27,32 +43,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-/**
- * Firestore aquí es SOLO para lectura en tiempo real (que las tablas se
- * actualicen solas). Ninguna pantalla debe escribir directo con esto —
- * toda escritura pasa por las funciones de abajo. Así el backend siempre
- * puede confiar en metadata.modificadoPor (ver /firestore.rules).
- */
 export const db = getFirestore(app);
 const functions = getFunctions(app);
-
-/**
- * Mientras desarrollas con `firebase emulators:start`, el cliente debe hablar
- * con los emuladores locales, NO con producción — de lo contrario terminas
- * llamando a una función que nunca se ha desplegado (el error de CORS que
- * viste es justo eso). Los puertos son configurables por si en tu máquina
- * Firebase termina asignando otros distintos a los de firebase.json
- * (revisa siempre la tabla que imprime la terminal al arrancar).
- */
-// Connect to local emulators when developing or when the app is served
-// from the hosting emulator (127.0.0.1 / localhost). The hosting emulator
-// serves production-built assets where `import.meta.env.DEV` is false,
+export const storage = getStorage(app);
 
 
 if (runningLocally) {
   const authPort = Number(import.meta.env.VITE_EMULATOR_AUTH_PORT ?? 9099);
   const firestorePort = Number(import.meta.env.VITE_EMULATOR_FIRESTORE_PORT ?? 3035);
   const functionsPort = Number(import.meta.env.VITE_EMULATOR_FUNCTIONS_PORT ?? 5001);
+  const storagePort = Number(import.meta.env.VITE_EMULATOR_STORAGE_PORT ?? 9199);
+  connectStorageEmulator(storage, "127.0.0.1", storagePort);
   console.log(`Conectando a emuladores locales: auth:${authPort}, firestore:${firestorePort}, functions:${functionsPort}`
   );
 
@@ -69,17 +70,14 @@ export function iniciarSesion(email: string, password: string) {
 export function cerrarSesion() {
   return signOut(auth);
 }
+export function recuperarContrasena(email: string) {
+  return sendPasswordResetEmail(auth, email);
+}
+
 
 export function alCambiarSesion(cb: (user: User | null) => void) {
   return onAuthStateChanged(auth, cb);
 }
-
-// --- Llamadas al backend (admin-api) ---
-// Cada módulo nuevo (servicios, convenios, reportes...) agrega sus propias
-// funciones aquí, siguiendo el mismo patrón: una función de Cloud Functions
-// por acción, envuelta con httpsCallable.
-
-import type { CrearAfiliadoInput, PersonaCubierta, Afiliado } from "../types";
 
 export async function crearAfiliado(input: CrearAfiliadoInput): Promise<Afiliado> {
   const fn = httpsCallable<CrearAfiliadoInput, { afiliado: Afiliado }>(functions, "crearAfiliadoFn");
@@ -96,7 +94,6 @@ export async function buscarPersonaCubierta(termino: string): Promise<PersonaCub
   return res.data.resultados;
 }
 
-import type { RegistrarBovedaInput, Boveda, EstadoBoveda } from "../types";
 
 export async function registrarBoveda(input: RegistrarBovedaInput): Promise<Boveda> {
   const fn = httpsCallable<RegistrarBovedaInput, { boveda: Boveda }>(functions, "registrarBovedaFn");
@@ -110,10 +107,115 @@ export async function listarBovedasPorEstado(estado?: EstadoBoveda): Promise<Bov
   return res.data.bovedas;
 }
 
-import type { RegistrarServicioInput, Servicio } from "../types";
-
 export async function registrarServicio(input: RegistrarServicioInput): Promise<Servicio> {
   const fn = httpsCallable<RegistrarServicioInput, { servicio: Servicio }>(functions, "registrarServicioFn");
   const res = await fn(input);
   return res.data.servicio;
+}
+
+export async function crearConvenio(input: CrearConvenioInput): Promise<Convenio> {
+  const fn = httpsCallable<CrearConvenioInput, { convenio: Convenio }>(functions, "crearConvenioFn");
+  const res = await fn(input);
+  return res.data.convenio;
+}
+
+export async function guardarTarifa(input: GuardarTarifaInput): Promise<void> {
+  const fn = httpsCallable<GuardarTarifaInput, { ok: boolean }>(functions, "guardarTarifaFn");
+  await fn(input);
+}
+
+export async function crearTipoCofre(input: CrearTipoCofreInput): Promise<TipoCofre> {
+  const fn = httpsCallable<CrearTipoCofreInput, { cofre: TipoCofre }>(functions, "crearTipoCofreFn");
+  const res = await fn(input);
+  return res.data.cofre;
+}
+
+export async function crearPlan(input: CrearPlanInput): Promise<PlanFunerario> {
+  const fn = httpsCallable<CrearPlanInput, { plan: PlanFunerario }>(functions, "crearPlanFn");
+  const res = await fn(input);
+  return res.data.plan;
+}
+
+export async function crearFlor(input: CrearFlorInput): Promise<Flor> {
+  const fn = httpsCallable<CrearFlorInput, { flor: Flor }>(functions, "crearFlorFn");
+  const res = await fn(input);
+  return res.data.flor;
+}
+
+export async function actualizarInventario(input: ActualizarInventarioInput): Promise<InventarioCofre> {
+  const fn = httpsCallable<ActualizarInventarioInput, { registro: InventarioCofre }>(functions, "actualizarInventarioFn");
+  const res = await fn(input);
+  return res.data.registro;
+}
+
+export async function generarReporte(input: GenerarReporteInput): Promise<FilaReporte[]> {
+  const fn = httpsCallable<GenerarReporteInput, { filas: FilaReporte[] }>(functions, "generarReporteFn");
+  const res = await fn(input);
+  return res.data.filas;
+}
+export async function actualizarTipoCofre(input: ActualizarTipoCofreInput): Promise<TipoCofre> {
+  const fn = httpsCallable<ActualizarTipoCofreInput, { cofre: TipoCofre }>(functions, "actualizarTipoCofreFn");
+  const res = await fn(input);
+  return res.data.cofre;
+}
+export async function actualizarServicio(input: ActualizarServicioInput): Promise<Servicio> {
+  const fn = httpsCallable<ActualizarServicioInput, { servicio: Servicio }>(functions, "actualizarServicioFn");
+  const res = await fn(input);
+  return res.data.servicio;
+}
+
+export async function registrarPago(input: RegistrarPagoInput): Promise<Pago> {
+  const fn = httpsCallable<RegistrarPagoInput, { pago: Pago }>(functions, "registrarPagoFn");
+  const res = await fn(input);
+  return res.data.pago;
+}
+
+export async function listarPagosPorAfiliado(afiliadoId: string): Promise<Pago[]> {
+  const fn = httpsCallable<{ afiliadoId: string }, { pagos: Pago[] }>(functions, "listarPagosPorAfiliadoFn");
+  const res = await fn({ afiliadoId });
+  return res.data.pagos;
+}
+
+export async function crearUsuario(input: CrearUsuarioInput): Promise<{ uid: string; enlaceInvitacion: string }> {
+  const fn = httpsCallable<CrearUsuarioInput, { uid: string; enlaceInvitacion: string }>(functions, "crearUsuarioFn");
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function listarUsuarios(): Promise<UsuarioListado[]> {
+  const fn = httpsCallable<void, { usuarios: UsuarioListado[] }>(functions, "listarUsuariosFn");
+  const res = await fn();
+  return res.data.usuarios;
+}
+
+export async function asignarRol(uid: string, rol: "admin" | "empleado", sede: string): Promise<void> {
+  const fn = httpsCallable<{ uid: string; claims: { rol: string; sede: string } }, { ok: boolean }>(functions, "asignarRolFn");
+  await fn({ uid, claims: { rol, sede: rol === "admin" ? "all" : sede } });
+}
+
+export async function generarEnlaceInvitacion(email: string): Promise<string> {
+  const fn = httpsCallable<{ email: string }, { enlaceInvitacion: string }>(functions, "generarEnlaceInvitacionFn");
+  const res = await fn({ email });
+  return res.data.enlaceInvitacion;
+}
+
+export async function cambiarEstadoUsuario(uid: string, deshabilitado: boolean): Promise<void> {
+  const fn = httpsCallable<{ uid: string; deshabilitado: boolean }, { ok: boolean }>(functions, "cambiarEstadoUsuarioFn");
+  await fn({ uid, deshabilitado });
+}
+
+export async function actualizarFlor(input: ActualizarFlorInput): Promise<Flor> {
+  const fn = httpsCallable<ActualizarFlorInput, { flor: Flor }>(functions, "actualizarFlorFn");
+  const res = await fn(input);
+  return res.data.flor;
+}
+
+export async function eliminarFlor(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarFlorFn");
+  await fn({ id });
+}
+
+export async function eliminarTipoCofre(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarTipoCofreFn");
+  await fn({ id });
 }

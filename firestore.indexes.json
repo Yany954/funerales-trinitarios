@@ -4,54 +4,59 @@
       "collectionGroup": "servicios",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "convenioId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaServicio",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "convenioId", "order": "ASCENDING" },
+        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "servicios",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "sede",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaServicio",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "sede", "order": "ASCENDING" },
+        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "personas_cubiertas",
+      "collectionGroup": "servicios",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "cedula",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "sede", "order": "ASCENDING" },
+        { "fieldPath": "convenioId", "order": "ASCENDING" },
+        { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "servicios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sede", "order": "ASCENDING" },
+        { "fieldPath": "estadoFacturacion", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "afiliados",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "sede",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "nombreCompleto",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "sede", "order": "ASCENDING" },
+        { "fieldPath": "nombreCompleto", "order": "ASCENDING" }
       ]
-    }
+    },
+    {
+  "collectionGroup": "bovedas",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "sede", "order": "ASCENDING" },
+    { "fieldPath": "fechaLimite", "order": "ASCENDING" }
+  ]
+},
+    {
+  "collectionGroup": "pagos",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "afiliadoId", "order": "ASCENDING" },
+    { "fieldPath": "fecha", "order": "DESCENDING" }
+  ]
+}
   ],
   "fieldOverrides": []
 }

@@ -11,6 +11,7 @@ import {
   CreditCard,
   BarChart3,
   X,
+  UserCog,
 } from "lucide-react";
 
 const items = [
@@ -24,6 +25,7 @@ const items = [
   { to: "/flores", label: "Flores", icon: Flower2 },
   { to: "/planes", label: "Planes funerarios", icon: CreditCard },
   { to: "/reportes", label: "Reportes", icon: BarChart3 },
+  { to: "/usuarios", label: "Usuarios", icon: UserCog },
 ];
 
 interface Props {
@@ -50,9 +52,12 @@ export default function Sidebar({ abiertoEnMovil, onCerrar }: Props) {
           ${abiertoEnMovil ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-5 py-5 border-b border-vino-600/60">
-          <div>
-            <p className="font-display text-lg leading-tight">Los Trinitarios</p>
-            <p className="text-xs text-vino-100/70">Panel interno</p>
+          <div className="flex items-center gap-2.5">
+            <img src="logo.png" alt="" className="h-10 w-auto" />
+            <div>
+              <p className="font-display text-lg leading-tight">Los Trinitarios</p>
+              <p className="text-xs text-vino-100/70">Panel interno</p>
+            </div>
           </div>
           <button className="md:hidden p-1" onClick={onCerrar} aria-label="Cerrar menú">
             <X size={20} />
@@ -67,10 +72,9 @@ export default function Sidebar({ abiertoEnMovil, onCerrar }: Props) {
               end={end}
               onClick={onCerrar}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                  isActive
-                    ? "bg-buganvilla/90 text-white font-medium"
-                    : "text-vino-100/85 hover:bg-vino-600/60"
+                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${isActive
+                  ? "bg-buganvilla/90 text-white font-medium"
+                  : "text-vino-100/85 hover:bg-vino-600/60"
                 }`
               }
             >

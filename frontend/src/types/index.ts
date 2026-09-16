@@ -15,6 +15,7 @@ export interface Afiliado {
   estadoPlan: "activo" | "inactivo" | "en mora";
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
+  sede: Sede;
 }
 
 export interface CrearAfiliadoInput {
@@ -55,6 +56,7 @@ export interface Boveda {
   valorArriendo: number;
   incluyeExhumacion: boolean;
   estado: EstadoBoveda;
+  sede: Sede;
 }
 
 export interface RegistrarBovedaInput {
@@ -63,6 +65,7 @@ export interface RegistrarBovedaInput {
   fechaInicio: string; // tal como lo da un <input type="date">
   valorArriendo: number;
   incluyeExhumacion: boolean;
+  sede: Sede;
 }
 export interface ItemServicio {
   concepto: string;
@@ -89,6 +92,7 @@ export interface Servicio {
   itemsServicio: ItemServicio[];
   valorTotal: number;
   estadoFacturacion: EstadoFacturacion;
+  documentosAdjuntos: string[];
 }
 
 export interface RegistrarServicioInput {
@@ -104,3 +108,110 @@ export interface RegistrarServicioInput {
   itemsServicio: ItemServicio[];
   observaciones?: string;
 }
+export type TipoConvenio = "empresa_exequial" | "alcaldia" | "interno";
+
+export interface Convenio {
+  id: string;
+  nombre: string;
+  tipo: TipoConvenio;
+  numeroContrato?: string;
+  coberturaGeografica: string[];
+}
+
+export interface TarifaConvenio {
+  anio: string;
+  servicioCompletoBasico: number;
+  servicioCompletoSemilujo?: number;
+  servicioCompletoLujo?: number;
+  iniciales: number;
+  finales: number;
+  trasladoLocal: number;
+  trasladoFluvial: number;
+}
+
+export interface CrearConvenioInput {
+  nombre: string;
+  tipo: TipoConvenio;
+  numeroContrato?: string;
+  coberturaGeografica: string[];
+}
+
+export interface GuardarTarifaInput extends TarifaConvenio {
+  convenioId: string;
+}
+export type NivelCofre = "basico" | "semilujo" | "lujo";
+export type CategoriaCofre = "estandar" | "ancho" | "infantil";
+
+export interface TipoCofre {
+  id: string;
+  categoria: CategoriaCofre;
+  nivel?: NivelCofre;
+  tamanoCm?: number;
+  referencia: string;
+  precio: number;
+  fotoURL?: string;
+  descripcion?: string;
+}
+export interface CrearTipoCofreInput { categoria: CategoriaCofre; nivel?: NivelCofre; tamanoCm?: number; referencia: string; precio: number; fotoURL?: string; descripcion?: string; }
+export interface ActualizarTipoCofreInput { id: string; categoria?: CategoriaCofre; nivel?: NivelCofre; tamanoCm?: number; referencia?: string; precio?: number; fotoURL?: string; descripcion?: string; }
+
+export interface PlanFunerario { id: string; nombre: string; valorMensual: number; }
+export interface CrearPlanInput { nombre: string; valorMensual: number; }
+
+export interface Flor { id: string; nombre: string; fotoURL?: string; precioCosto: number; precioPublico: number; }
+export interface CrearFlorInput { nombre: string; precioCosto: number; precioPublico: number; fotoURL?: string; }
+
+export interface InventarioCofre { id: string; sede: string; tipoCofreId: string; cantidadDisponible: number; }
+export interface ActualizarInventarioInput { sede: string; tipoCofreId: string; cantidadDisponible: number; }
+
+export type TipoFiltroReporte = "alcaldia" | "convenio" | "sede";
+
+export interface FilaReporte {
+  fecha: string;
+  fallecido: string;
+  valor: number;
+  descripcion: string;
+  usoBoveda: boolean;
+}
+
+export interface GenerarReporteInput {
+  filtroTipo: TipoFiltroReporte;
+  filtroValor: string;
+  fechaInicio: string;
+  fechaFin: string;
+}
+export interface ActualizarServicioInput {
+  id: string;
+  fechaServicio?: string;
+  convenioId?: string;
+  fallecido?: { nombreCompleto: string; cedula?: string };
+  tipoServicio?: TipoServicio;
+  tipoTraslado?: TipoTraslado;
+  usaBoveda?: boolean;
+  tuvoMisaOCulto?: "misa" | "culto" | "ninguno";
+  itemsServicio?: ItemServicio[];
+  documentosAdjuntos?: string[];
+  observaciones?: string;
+}
+export interface Pago {
+  id: string;
+  afiliadoId: string;
+  sede: Sede;
+  fecha: string;
+  valor: number;
+  periodoCubierto: string;
+  comprobanteURL: string;
+}
+
+export interface RegistrarPagoInput {
+  afiliadoId: string;
+  sede: Sede;
+  fecha: string;
+  valor: number;
+  periodoCubierto: string;
+  comprobanteURL: string;
+}
+export interface UsuarioListado { uid: string; email: string; nombre: string; rol: "admin" | "empleado"; sede: string; deshabilitado: boolean; }
+export interface CrearUsuarioInput { nombre: string; email: string; rol: "admin" | "empleado"; sede: string; }
+
+export interface ActualizarFlorInput { id: string; nombre?: string; precioCosto?: number; precioPublico?: number; fotoURL?: string; }

@@ -10,6 +10,8 @@ import Bovedas from "./pages/Bovedas";
 import Flores from "./pages/Flores";
 import Planes from "./pages/Planes";
 import Reportes from "./pages/Reportes";
+import RutaSoloAdmin from "./components/RutaSoloAdmin";
+import Usuarios from "./pages/Usuarios";
 
 export const router = createBrowserRouter([
   {
@@ -18,14 +20,15 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "afiliados", element: <Afiliados /> },
-      { path: "servicios", element: <Servicios /> },
-      { path: "convenios", element: <Convenios /> },
-      { path: "cofres", element: <Cofres /> },
-      { path: "inventario", element: <Inventario /> },
+      { path: "servicios", element: <RutaSoloAdmin><Servicios /></RutaSoloAdmin> },
+      { path: "convenios", element:<RutaSoloAdmin><Convenios /></RutaSoloAdmin> },
+      { path: "inventario", element: <RutaSoloAdmin><Inventario /></RutaSoloAdmin> },
       { path: "bovedas", element: <Bovedas /> },
-      { path: "flores", element: <Flores /> },
-      { path: "planes", element: <Planes /> },
+      { path: "flores", element: <RutaSoloAdmin><Flores /></RutaSoloAdmin> },
       { path: "reportes", element: <Reportes /> },
+      { path: "cofres", element: <RutaSoloAdmin><Cofres /></RutaSoloAdmin> },
+      { path: "planes", element: <RutaSoloAdmin><Planes /></RutaSoloAdmin> },
+      { path: "usuarios", element: <RutaSoloAdmin><Usuarios /></RutaSoloAdmin> },
     ],
   },
 ]);

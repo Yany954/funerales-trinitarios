@@ -1,11 +1,12 @@
 import { ServiciosRepository } from "../ports/servicios.repository";
 import { ConveniosRepository } from "../ports/convenios.repository";
+import { Servicio } from "../../domain/entities/servicio";
 
 export type TipoFiltroReporte = "alcaldia" | "convenio" | "sede";
 
 export interface GenerarReporteInput {
   filtroTipo: TipoFiltroReporte;
-  filtroValor: string; // convenioId si es alcaldia/convenio; nombre de sede si es sede
+  filtroValor: string;
   fechaInicio: string;
   fechaFin: string;
 }
@@ -18,23 +19,7 @@ export interface FilaReporte {
   usoBoveda: boolean;
 }
 
-export async function generarReporte(
-  serviciosRepo: ServiciosRepository,
-  conveniosRepo: ConveniosRepository,
-  input: GenerarReporteInput
-): Promise<FilaReporte[]> {
-  const fechaInicio = new Date(input.fechaInicio);
-  const fechaFin = new Date(input.fechaFin);
-
-  let servicios;
-  if (input.filtroTipo === "sede") {
-    const convenios = await conveniosRepo.listar();
-    const idsInternos = convenios.filter((c) => c.tipo === "interno").map((c) => c.id);
-    servicios = await serviciosRepo.buscarPorSedeYConvenios(input.filtroValor, idsInternos, fechaInicio, fechaFin);
-  } else {
-    servicios = await serviciosRepo.buscarPorConvenio(input.filtroValor, fechaInicio, fechaFin);
-  }
-
+function mapearFilas(servicios: Servicio[]): FilaReporte[] {
   return servicios
     .filter((s) => s.estadoFacturacion === "pendiente por facturar")
     .map((s) => ({
@@ -44,4 +29,31 @@ export async function generarReporte(
       descripcion: s.itemsServicio.map((i) => i.concepto).join(", "),
       usoBoveda: s.usoBoveda.usada,
     }));
+}
+
+export async function generarReporte(
+  serviciosRepo: ServiciosRepository,
+  conveniosRepo: ConveniosRepository,
+  input: GenerarReporteInput
+): Promise<FilaReporte[]> {
+  const fechaInicio = new Date(input.fechaInicio);
+  const fechaFin = new Date(input.fechaFin);
+
+  if (input.filtroTipo === "sede") {
+    const [servicios, convenios] = await Promise.all([
+      serviciosRepo.buscarPorSede(input.filtroValor, fechaInicio, fechaFin),
+      conveniosRepo.listar(),
+    ]);
+    const tipoPorConvenio = new Map(convenios.map((c) => [c.id, c.tipo]));
+    // Cuenta como "de sede" cualquier servicio SIN convenio asignado, o cuyo
+    // convenio sea explícitamente interno — así no depende de que hayas
+    // precargado un convenio "Afiliados" para que funcione.
+    const deSede = servicios.filter(
+      (s) => !s.convenioId || tipoPorConvenio.get(s.convenioId) === "interno"
+    );
+    return mapearFilas(deSede);
+  }
+
+  const servicios = await serviciosRepo.buscarPorConvenio(input.filtroValor, fechaInicio, fechaFin);
+  return mapearFilas(servicios);
 }

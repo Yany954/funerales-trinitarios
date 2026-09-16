@@ -111,14 +111,36 @@ VITE_FIREBASE_APP_ID=
 ## Estado actual
 
 - ✅ Estructura completa de carpetas (backend Clean Architecture + frontend dashboard)
-- ✅ Módulo de `afiliados` completo de punta a punta (entidad → caso de uso →
-  repositorio Firestore → función admin-api → página React) — úsalo como
-  plantilla para los demás módulos (servicios, convenios, cofres, inventario,
-  flores, planes, bóvedas, reportes), que están dejados como páginas base
-  (`TODO` marcado) siguiendo exactamente el mismo patrón.
-- ✅ Reglas de seguridad de Firestore: lectura autenticada, escritura SOLO
-  desde Cloud Functions.
-- ⬜ Módulos de servicios/convenios/reportes: siguiente paso, replicando el
-  patrón de `afiliados`.
+- ✅ Roles y sedes: custom claims (`admin` / `empleado` + sede asignada), reglas
+  de Firestore/Storage que filtran por sede, selector de sede en el header
+  para el admin (`RolContext`, `RutaSoloAdmin`)
+- ✅ Módulo de **Usuarios** (solo admin): invitación por enlace (sin necesidad
+  de servicio de correo), asignar rol/sede, deshabilitar acceso
+- ✅ Módulo de **Afiliados**: alta, búsqueda de personas cubiertas
+  (`personas_cubiertas`, titulares y beneficiarios) por nombre o cédula,
+  filtrado por sede
+- ✅ Módulo de **Servicios**: alta y edición, ítems con precio automático
+  desde el catálogo de cofres/flores (con opción de sobrescribir el valor),
+  documentos adjuntos, ID copiable para referenciar en Bóvedas
+- ✅ Módulo de **Convenios**: alta, tarifas por año (histórico 2025/2026),
+  gráfica de precios por convenio con recharts
+- ✅ Módulo de **Cofres**: catálogo con nivel, precio, foto subida desde
+  dispositivo (cámara o galería) — solo admin
+- ✅ Módulo de **Flores**: catálogo con precio costo/público y foto — solo admin
+- ✅ Módulo de **Inventario**: cantidad de cofres por sede
+- ✅ Módulo de **Bóvedas**: registro con cálculo automático de vencimiento a
+  4 años, función programada diaria que actualiza el estado
+  (`vigente` / `por vencer` / `vencida`)
+- ✅ Módulo de **Pagos**: comprobante con foto, historial por afiliado,
+  función programada diaria que marca mora automáticamente
+- ✅ Módulo de **Reportes**: servicios pendientes por facturar, filtrable por
+  Alcaldía / Convenio / Sede con rango de fechas
+- ✅ Dashboard con métricas reales (servicios del mes, pendientes por
+  facturar, bóvedas por vencer)
+- ✅ Trazabilidad IA/humano (`metadata.modificadoPor`) en todos los registros
+- ✅ Reglas de seguridad de Firestore y Storage por sede/rol; toda escritura
+  pasa por Cloud Functions, nunca directo desde el cliente
+- ✅ Desplegado en producción (Firestore, Storage, Functions, Hosting)
+- ⬜ Recuperar contraseña ("olvidé mi contraseña") — en progreso
 - ⬜ Bot de WhatsApp (Twilio) y agente de voz (ElevenLabs): fase posterior,
-  una vez esté sólido el registro manual.
+  una vez esté sólido el uso diario del registro manual

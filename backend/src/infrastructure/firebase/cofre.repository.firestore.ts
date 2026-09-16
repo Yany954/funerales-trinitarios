@@ -20,4 +20,15 @@ export class CofresRepositoryFirestore implements CofresRepository {
       return { id: d.id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as TipoCofre;
     });
   }
+  async actualizar(id: string, cambios: Partial<Omit<TipoCofre, "id">>): Promise<TipoCofre> {
+    const datos: any = { ...cambios };
+    if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
+    await db.collection(TIPOS_COFRE).doc(id).update(datos);
+    const doc = await db.collection(TIPOS_COFRE).doc(id).get();
+    const data = doc.data()!;
+    return { id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as TipoCofre;
+  }
+  async eliminar(id: string): Promise<void> {
+    await db.collection(TIPOS_COFRE).doc(id).delete();
+  }
 }

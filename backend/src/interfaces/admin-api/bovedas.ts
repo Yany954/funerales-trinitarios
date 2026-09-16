@@ -1,7 +1,7 @@
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { requireAuth } from "../../infrastructure/auth/rbac";
 import { BovedaRepositoryFirestore } from "../../infrastructure/firebase/boveda.repository.firebase";
-import {listarBovedasPorEstado} from "../../application/boveda/listarBovedasPorEstado.usecase";
+import { listarBovedasPorEstado } from "../../application/boveda/listarBovedasPorEstado.usecase";
 import { registrarBoveda } from "../../application/boveda/registrarBoveda.usecase";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { RegistrarBovedaInput } from "../../application/boveda/registrarBoveda.usecase";
@@ -12,6 +12,9 @@ const repo = new BovedaRepositoryFirestore();
 /** El dashboard llama esto para crear una boveda nueva. */
 export const registrarBovedaFn = onCall<RegistrarBovedaInput>(async (request) => {
   const uid = requireAuth(request);
+  if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
+    throw new HttpsError("permission-denied", "No puedes registrar bóvedas de otra sede.");
+  }
   const boveda = await registrarBoveda(repo, request.data, metadataHumano(uid));
   return { boveda };
 });

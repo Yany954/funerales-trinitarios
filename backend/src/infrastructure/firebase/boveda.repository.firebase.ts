@@ -60,4 +60,5 @@ export class BovedaRepositoryFirestore implements BovedaRepository {
       metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
     });
   }
+  
 }

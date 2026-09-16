@@ -3,3 +3,5 @@ dist/
 .env.local
 *.log
 .env.example
+.env.production
+.env.development.local

@@ -1,4 +1,5 @@
 import { Afiliado, PersonaCubierta } from "../../domain/entities/afiliado";
+import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 
 /**
  * Puerto (interfaz): el caso de uso depende de ESTO, no de Firestore directamente.
@@ -11,4 +12,7 @@ export interface AfiliadosRepository {
   obtenerPorId(id: string): Promise<Afiliado | null>;
   sincronizarPersonasCubiertas(afiliado: Afiliado): Promise<void>;
   buscarPersonaCubiertaPorNombreOCedula(termino: string): Promise<PersonaCubierta[]>;
+  listarTodos(): Promise<Afiliado[]>;
+  actualizarEstadoPlan(id: string, estado: Afiliado["estadoPlan"], metadata: MetadataCambio): Promise<void>;
+  actualizarUltimoPago(afiliadoId: string, ultimoPago: { fecha: Date; valor: number; metodo: string }, metadata: MetadataCambio): Promise<void>;
 }

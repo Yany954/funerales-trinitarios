@@ -8,7 +8,7 @@
  * escritura que no venga del Admin SDK (ver /firestore.rules).
  */
 
-export type CanalCambio = "dashboard-web" | "whatsapp-bot" | "agente-voz";
+export type CanalCambio = "dashboard-web" | "whatsapp-bot" | "agente-voz" | "scheduler";
 export type TipoAutor = "humano" | "ia";
 
 export interface MetadataCambio {

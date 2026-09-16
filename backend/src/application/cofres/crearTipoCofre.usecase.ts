@@ -3,8 +3,11 @@ import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { CofresRepository } from "../ports/cofres.repository";
 
 export interface CrearTipoCofreInput {
-  nivel: TipoCofre["nivel"];
+  categoria: TipoCofre["categoria"];
+  nivel?: TipoCofre["nivel"];
+  tamanoCm?: number;
   referencia: string;
+  precio: number;
   fotoURL?: string;
   descripcion?: string;
 }

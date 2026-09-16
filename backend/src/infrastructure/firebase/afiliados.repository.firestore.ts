@@ -1,6 +1,7 @@
 import { db, Timestamp } from "./admin";
 import { Afiliado, PersonaCubierta } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
+import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
@@ -96,4 +97,27 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
 
     return porNombre.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PersonaCubierta, "id">) }));
   }
+  async listarTodos(): Promise<Afiliado[]> {
+  const snap = await db.collection(AFILIADOS).get();
+  return snap.docs.map((d) => deFirestore(d.id, d.data()));
+}
+
+async actualizarEstadoPlan(id: string, estado: Afiliado["estadoPlan"], metadata: MetadataCambio): Promise<void> {
+  await db.collection(AFILIADOS).doc(id).update({
+    estadoPlan: estado,
+    metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
+  });
+}
+
+async actualizarUltimoPago(
+  afiliadoId: string,
+  ultimoPago: { fecha: Date; valor: number; metodo: string },
+  metadata: MetadataCambio
+): Promise<void> {
+  await db.collection(AFILIADOS).doc(afiliadoId).update({
+    ultimoPago: { ...ultimoPago, fecha: Timestamp.fromDate(ultimoPago.fecha) },
+    estadoPlan: "activo",
+    metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
+  });
+}
 }

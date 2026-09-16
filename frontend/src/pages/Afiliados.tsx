@@ -3,8 +3,11 @@ import { collection, onSnapshot, orderBy, query, where } from "firebase/firestor
 import { Search, UserPlus } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
-import type { Afiliado, PersonaCubierta } from "../types";
+import type { Afiliado, PersonaCubierta, PlanFunerario } from "../types";
 import { useRol } from "../auth/RolContext";
+import PanelPagos from "../components/PanelPagos";
+import { Receipt } from "lucide-react";
+import { formatoPesos } from "../utils/formato";
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
@@ -17,7 +20,25 @@ export default function Afiliados() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { rol, sedeAsignada, sedeSeleccionada } = useRol();
+  const { rol, sedeAsignada, sedeSeleccionada, cargando: cargandoRol } = useRol();
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  const [planes, setPlanes] = useState<PlanFunerario[]>([]);
+  const [mapaPlanes, setMapaPlanes] = useState<Record<string, string>>({});
+  const [afiliadoPagos, setAfiliadoPagos] = useState<Afiliado | null>(null);
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, "planes_funerarios")),
+      (snap) => {
+        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() } as PlanFunerario));
+        setPlanes(lista);
+
+        const mapa: Record<string, string> = {};
+        lista.forEach((p) => (mapa[p.id] = p.nombre));
+        setMapaPlanes(mapa);
+      },
+      (err) => console.error("Error cargando planes:", err)
+    );
+  }, []);
 
   // Lectura en tiempo real — solo lectura, ver nota en api/client.ts
   useEffect(() => {
@@ -28,7 +49,7 @@ export default function Afiliados() {
     const unsub = onSnapshot(q, (snap) => {
       setAfiliados(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Afiliado)));
       setCargando(false);
-    });
+    }, (err) => console.error("Error en la consulta:", err));
     return unsub;
   }, [sedeSeleccionada]);
 
@@ -133,10 +154,9 @@ export default function Afiliados() {
             <input name="cedula" required placeholder="Cédula" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <select name="planId" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Plan…</option>
-              <option value="girasol">Girasol — $20.000/mes</option>
-              <option value="alianza">Alianza — $28.000/mes</option>
-              <option value="bendiciones">Bendiciones — $32.000/mes</option>
-              <option value="integral">Integral — $38.000/mes</option>
+              {planes.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre} — {formatoPesos(p.valorMensual)}/mes</option>
+              ))}
             </select>
             {rol === "admin" ? (
               <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
@@ -169,7 +189,7 @@ export default function Afiliados() {
         columnas={[
           { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto },
           { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
-          { encabezado: "Plan", render: (a: Afiliado) => a.planId },
+          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (
@@ -185,6 +205,14 @@ export default function Afiliados() {
               </span>
             ),
           },
+          {
+            encabezado: "Pagos",
+            render: (a: Afiliado) => (
+              <button onClick={() => setAfiliadoPagos(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
+                <Receipt size={14} /> Ver
+              </button>
+            ),
+          },
         ]}
         filas={afiliados}
         cargando={cargando}
@@ -192,6 +220,7 @@ export default function Afiliados() {
         vacioTitulo="Todavía no hay afiliados registrados"
         vacioDescripcion='Usa "Nuevo afiliado" para agregar el primero.'
       />
+      {afiliadoPagos && <PanelPagos afiliado={afiliadoPagos} onCerrar={() => setAfiliadoPagos(null)} />}
     </div>
   );
 }

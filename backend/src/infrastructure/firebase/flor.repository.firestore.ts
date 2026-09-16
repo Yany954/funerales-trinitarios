@@ -19,4 +19,16 @@ export class FloresRepositoryFirestore implements FloresRepository {
       return { id: d.id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Flor;
     });
   }
+  async actualizar(id: string, cambios: Partial<Omit<Flor, "id">>): Promise<Flor> {
+    const datos: any = { ...cambios };
+    if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
+    await db.collection(FLORES).doc(id).update(datos);
+    const doc = await db.collection(FLORES).doc(id).get();
+    const data = doc.data()!;
+    return { id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Flor;
+  }
+
+  async eliminar(id: string): Promise<void> {
+    await db.collection(FLORES).doc(id).delete();
+  }
 }
