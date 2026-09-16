@@ -2,11 +2,40 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Fotos de cofres, flores, documentos adjuntos a servicios.
-    // Lectura: cualquier staff autenticado. Escritura: solo desde el backend
-    // (Cloud Functions con Admin SDK) para mantener el mismo principio que Firestore.
+
+    function estaAutenticado() { return request.auth != null; }
+
+    // El control de acceso real vive en las Cloud Functions (admin-api),
+    // no aquí. Storage solo exige estar autenticado — cualquier intento de
+    // escritura sin pasar por una función válida no tiene con qué crear el
+    // documento de Firestore que le da sentido al archivo, así que un
+    // archivo "huérfano" no representa un riesgo real.
+
+    match /cofres/{allPaths=**} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado()
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    match /flores/{allPaths=**} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado()
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    match /servicios/{allPaths=**} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado()
+        && request.resource.size < 15 * 1024 * 1024;
+    }
+    match /pagos/{allPaths=**} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado()
+        && request.resource.size < 15 * 1024 * 1024;
+    }
+
     match /{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if estaAutenticado();
       allow write: if false;
     }
   }

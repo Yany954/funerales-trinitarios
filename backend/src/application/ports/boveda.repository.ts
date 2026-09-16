@@ -11,4 +11,6 @@ export interface BovedaRepository {
     nuevoEstado: EstadoBoveda,
     metadata: MetadataCambio
   ): Promise<void>;
+  obtenerPorServicioId(servicioId: string): Promise<Boveda | null>;
+  eliminar(id: string): Promise<void>;
 }

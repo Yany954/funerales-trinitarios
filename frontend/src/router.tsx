@@ -12,6 +12,7 @@ import Planes from "./pages/Planes";
 import Reportes from "./pages/Reportes";
 import RutaSoloAdmin from "./components/RutaSoloAdmin";
 import Usuarios from "./pages/Usuarios";
+import Facturacion from "./pages/Facturacion";
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { path: "cofres", element: <RutaSoloAdmin><Cofres /></RutaSoloAdmin> },
       { path: "planes", element: <RutaSoloAdmin><Planes /></RutaSoloAdmin> },
       { path: "usuarios", element: <RutaSoloAdmin><Usuarios /></RutaSoloAdmin> },
+      { path: "facturacion", element: <Facturacion /> },
     ],
   },
 ]);

@@ -4,7 +4,7 @@ import { BarChart3 } from "lucide-react";
 import { db, generarReporte } from "../api/client";
 import { useRol } from "../auth/RolContext";
 import type { Convenio, FilaReporte, TipoFiltroReporte } from "../types";
-import { formatoPesos } from "../utils/formato";
+import { formatoPesos, formatoFecha } from "../utils/formato";
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
 
@@ -112,7 +112,7 @@ if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargand
               <ul className="divide-y divide-vino-50">
                 {filas.map((f, i) => (
                   <li key={i} className="py-2.5 text-sm">
-                    <span className="font-medium text-vino-900">{new Date(f.fecha).toLocaleDateString("es-CO")}</span>
+                    <span className="font-medium text-vino-900">{formatoFecha(f.fecha)}</span>
                     {" — "}
                     {f.fallecido}: {f.descripcion}
                     {f.usoBoveda && <span className="ml-1 text-xs text-vino-700">(con bóveda)</span>}

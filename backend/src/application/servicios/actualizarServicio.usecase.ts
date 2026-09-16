@@ -1,6 +1,8 @@
 import { Servicio, ItemServicio } from "../../domain/entities/servicio";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
+import { BovedaRepository } from "../ports/boveda.repository";
 import { ServiciosRepository } from "../ports/servicios.repository";
+import { vincularBovedaAServicio, desvincularBovedaDeServicio } from "../boveda/vincularBovedaServicio.usecase";
 
 export interface ActualizarServicioInput {
   id: string;
@@ -18,6 +20,7 @@ export interface ActualizarServicioInput {
 
 export async function actualizarServicio(
   repo: ServiciosRepository,
+  bovedaRepo: BovedaRepository,
   input: ActualizarServicioInput,
   metadata: MetadataCambio
 ): Promise<Servicio> {
@@ -38,8 +41,17 @@ export async function actualizarServicio(
   }
   if (input.documentosAdjuntos) cambios.documentosAdjuntos = input.documentosAdjuntos;
   if (input.observaciones !== undefined) cambios.observaciones = input.observaciones;
-  // OJO: estadoFacturacion nunca se toca aquí a propósito — solo el módulo
-  // de Pagos (que viene después) puede marcar un servicio como facturado/pagado.
 
-  return repo.actualizar(input.id, cambios);
+  const actualizado = await repo.actualizar(input.id, cambios);
+
+  // Si cambió si usa bóveda o no, la bóveda vinculada se crea/borra sola.
+  if (input.usaBoveda !== undefined && input.usaBoveda !== actual.usoBoveda.usada) {
+    if (input.usaBoveda) {
+      await vincularBovedaAServicio(bovedaRepo, actualizado.id, actualizado.sede, actualizado.fechaServicio, metadata);
+    } else {
+      await desvincularBovedaDeServicio(bovedaRepo, actualizado.id);
+    }
+  }
+
+  return actualizado;
 }

@@ -1,6 +1,9 @@
 import { Servicio, ItemServicio } from "../../domain/entities/servicio";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
+import { vincularBovedaAServicio } from "../boveda/vincularBovedaServicio.usecase";
+import { BovedaRepository } from "../ports/boveda.repository";
 import { ServiciosRepository } from "../ports/servicios.repository";
+
 
 export interface RegistrarServicioInput {
   fechaServicio: string;
@@ -18,12 +21,13 @@ export interface RegistrarServicioInput {
 
 export async function registrarServicio(
   repo: ServiciosRepository,
+  bovedaRepo: BovedaRepository, // ← nuevo parámetro
   input: RegistrarServicioInput,
   metadata: MetadataCambio
 ): Promise<Servicio> {
   const valorTotal = input.itemsServicio.reduce((suma, item) => suma + item.valorTotal, 0);
 
-  return repo.crear({
+  const servicio = await repo.crear({
     fechaServicio: new Date(input.fechaServicio),
     sede: input.sede,
     convenioId: input.convenioId,
@@ -31,7 +35,7 @@ export async function registrarServicio(
     fallecido: input.fallecido,
     tipoServicio: input.tipoServicio,
     tipoTraslado: input.tipoTraslado,
-    usoBoveda: { usada: input.usaBoveda }, // la bóveda de verdad (zona, fechas) se crea en el módulo de Bóvedas, referenciando este servicio
+    usoBoveda: { usada: input.usaBoveda },
     tuvoMisaOCulto: input.tuvoMisaOCulto,
     itemsServicio: input.itemsServicio,
     valorTotal,
@@ -40,4 +44,10 @@ export async function registrarServicio(
     observaciones: input.observaciones,
     metadata,
   });
+
+  if (input.usaBoveda) {
+    await vincularBovedaAServicio(bovedaRepo, servicio.id, servicio.sede, servicio.fechaServicio, metadata);
+  }
+
+  return servicio;
 }

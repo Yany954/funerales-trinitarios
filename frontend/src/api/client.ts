@@ -26,6 +26,8 @@ import type { ActualizarServicioInput } from "../types";
 import type { RegistrarPagoInput, Pago } from "../types";
 import type { UsuarioListado, CrearUsuarioInput } from "../types";
 import type { ActualizarFlorInput } from "../types";
+import type { CambiarEstadoFacturacionInput } from "../types";
+
 
 
 const runningLocally =
@@ -218,4 +220,14 @@ export async function eliminarFlor(id: string): Promise<void> {
 export async function eliminarTipoCofre(id: string): Promise<void> {
   const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarTipoCofreFn");
   await fn({ id });
+}
+export async function actualizarEstadoFacturacion(id: string, estado: Servicio["estadoFacturacion"]): Promise<Servicio> {
+  const fn = httpsCallable<{ id: string; estado: Servicio["estadoFacturacion"] }, { servicio: Servicio }>(functions, "actualizarEstadoFacturacionFn");
+  const res = await fn({ id, estado });
+  return res.data.servicio;
+}
+export async function cambiarEstadoFacturacion(input: CambiarEstadoFacturacionInput): Promise<Servicio> {
+  const fn = httpsCallable<CambiarEstadoFacturacionInput, { servicio: Servicio }>(functions, "cambiarEstadoFacturacionFn");
+  const res = await fn(input);
+  return res.data.servicio;
 }

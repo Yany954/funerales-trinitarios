@@ -1,9 +1,11 @@
 import { Boveda } from "../../domain/entities/boveda";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { BovedaRepository } from "../ports/boveda.repository";
+import { Sede } from "../../domain/value-objects/rol-usuario";
 
 export interface RegistrarBovedaInput {
   servicioId: string;
+  sede: Sede;
   zona: string;
   fechaInicio: string;
   valorArriendo: number;
@@ -22,6 +24,7 @@ export async function registrarBoveda(
   return repo.crear({
     servicioId: input.servicioId,
     zona: input.zona,
+    sede: input.sede,
     fechaInicio,
     fechaLimite,
     valorArriendo: input.valorArriendo,

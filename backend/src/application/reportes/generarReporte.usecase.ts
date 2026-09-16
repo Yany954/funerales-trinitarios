@@ -12,7 +12,7 @@ export interface GenerarReporteInput {
 }
 
 export interface FilaReporte {
-  fecha: Date;
+  fecha: string;
   fallecido: string;
   valor: number;
   descripcion: string;
@@ -23,7 +23,7 @@ function mapearFilas(servicios: Servicio[]): FilaReporte[] {
   return servicios
     .filter((s) => s.estadoFacturacion === "pendiente por facturar")
     .map((s) => ({
-      fecha: s.fechaServicio,
+      fecha: s.fechaServicio.toISOString(),
       fallecido: s.fallecido.nombreCompleto,
       valor: s.valorTotal,
       descripcion: s.itemsServicio.map((i) => i.concepto).join(", "),

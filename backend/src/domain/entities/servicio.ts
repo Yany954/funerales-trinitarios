@@ -36,5 +36,7 @@ export interface Servicio {
   estadoFacturacion: EstadoFacturacion;
   documentosAdjuntos: string[];
   observaciones?: string;
+  facturaURL?: string;
+  comprobantePagoURL?: string;
   metadata: MetadataCambio;
 }

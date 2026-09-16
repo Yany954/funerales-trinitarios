@@ -93,6 +93,8 @@ export interface Servicio {
   valorTotal: number;
   estadoFacturacion: EstadoFacturacion;
   documentosAdjuntos: string[];
+  facturaURL?: string;
+  comprobantePagoURL?: string;
 }
 
 export interface RegistrarServicioInput {
@@ -215,3 +217,9 @@ export interface UsuarioListado { uid: string; email: string; nombre: string; ro
 export interface CrearUsuarioInput { nombre: string; email: string; rol: "admin" | "empleado"; sede: string; }
 
 export interface ActualizarFlorInput { id: string; nombre?: string; precioCosto?: number; precioPublico?: number; fotoURL?: string; }
+export interface CambiarEstadoFacturacionInput {
+  servicioId: string;
+  nuevoEstado: "facturado" | "pagado";
+  facturaURL?: string;
+  comprobantePagoURL?: string;
+}

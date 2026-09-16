@@ -3,16 +3,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regla general: cualquier persona autenticada del staff puede LEER,
-    // pero NADIE escribe directo desde el cliente (React o el bot).
-    // Toda escritura pasa por Cloud Functions (backend/src/interfaces/admin-api),
-    // que es lo único que corre con el Admin SDK y se salta estas reglas.
-    // Esto es lo que hace confiable el campo metadata.modificadoPor:
-    // si el cliente pudiera escribir directo, podría mentir sobre quién hizo el cambio.
+    function estaAutenticado() { return request.auth != null; }
+    function esAdmin() { return request.auth.token.rol == "admin"; }
+    function miSede() { return request.auth.token.sede; }
 
-    match /{document=**} {
-      allow read: if request.auth != null;
+    // Colecciones con dueño de sede: solo ve su sede, o todas si es admin
+    match /afiliados/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;
     }
+    match /servicios/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
+    match /pagos/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
+
+    // Solo administradores (ej. cofres, precios)
+    match /tipos_cofre/{id} {
+      allow read: if estaAutenticado() && esAdmin();
+      allow write: if false;
+    }
+
+    // Catálogos compartidos entre todas las sedes — cualquier staff autenticado los lee
+    match /convenios/{document=**} {
+      allow read: if estaAutenticado();
+      allow write: if false;
+    }
+    match /planes_funerarios/{id}   { allow read: if estaAutenticado(); allow write: if false; }
+    match /flores/{id}              { allow read: if estaAutenticado(); allow write: if false; }
+    match /bovedas/{id}             { allow read: if estaAutenticado(); allow write: if false; }
+    match /personas_cubiertas/{id}  { allow read: if estaAutenticado(); allow write: if false; }
   }
 }

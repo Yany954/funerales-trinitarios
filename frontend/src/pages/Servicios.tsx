@@ -5,8 +5,10 @@ import { db, registrarServicio, actualizarServicio } from "../api/client";
 import DataTable from "../components/DataTable";
 import SubirDocumento from "../components/SubirDocumento";
 import { useRol } from "../auth/RolContext";
-import type { Servicio, ItemServicio, TipoServicio, TipoTraslado, Convenio, TipoCofre, Flor } from "../types";
+import type { Servicio, ItemServicio, TipoServicio, TipoTraslado, Convenio, TipoCofre, Flor, TarifaConvenio } from "../types";
 import { formatoPesos, formatoTamano } from "../utils/formato";
+
+import { Link } from "react-router-dom"; 
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
 
@@ -39,6 +41,17 @@ export default function Servicios() {
   const [documentos, setDocumentos] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [convenioIdForm, setConvenioIdForm] = useState<string>("");
+const [tarifaConvenio, setTarifaConvenio] = useState<TarifaConvenio | null>(null);
+const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
+  { campo: "servicioCompletoBasico", etiqueta: "Servicio completo básico" },
+  { campo: "servicioCompletoSemilujo", etiqueta: "Servicio completo semilujo" },
+  { campo: "servicioCompletoLujo", etiqueta: "Servicio completo lujo" },
+  { campo: "iniciales", etiqueta: "Iniciales" },
+  { campo: "finales", etiqueta: "Finales" },
+  { campo: "trasladoLocal", etiqueta: "Traslado local" },
+  { campo: "trasladoFluvial", etiqueta: "Traslado fluvial" },
+];
 
   useEffect(() => {
     if (cargandoRol) return;
@@ -56,6 +69,14 @@ export default function Servicios() {
   useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
   useEffect(() => onSnapshot(query(collection(db, "tipos_cofre")), (s) => setCofres(s.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre)))), []);
   useEffect(() => onSnapshot(query(collection(db, "flores")), (s) => setFlores(s.docs.map((d) => ({ id: d.id, ...d.data() } as Flor)))), []);
+useEffect(() => {
+  if (!convenioIdForm) { setTarifaConvenio(null); return; }
+  return onSnapshot(
+    query(collection(db, "convenios", convenioIdForm, "tarifas"), orderBy("anio", "desc")),
+    (snap) => setTarifaConvenio(snap.empty ? null : (snap.docs[0].data() as TarifaConvenio)),
+    (err) => console.error("Error cargando tarifa del convenio:", err)
+  );
+}, [convenioIdForm]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
 
@@ -89,19 +110,21 @@ export default function Servicios() {
 
   const totalServicio = items.reduce((s, it) => s + it.valorTotal, 0);
 
-  function abrirParaCrear() {
-    setEditando(null);
-    setItems([itemVacio()]);
-    setDocumentos([]);
-    setMostrarFormulario(true);
-  }
+function abrirParaCrear() {
+  setEditando(null);
+  setItems([itemVacio()]);
+  setDocumentos([]);
+  setConvenioIdForm("");
+  setMostrarFormulario(true);
+}
 
-  function abrirParaEditar(servicio: Servicio) {
-    setEditando(servicio);
-    setItems(servicio.itemsServicio.length ? servicio.itemsServicio : [itemVacio()]);
-    setDocumentos(servicio.documentosAdjuntos ?? []);
-    setMostrarFormulario(true);
-  }
+function abrirParaEditar(servicio: Servicio) {
+  setEditando(servicio);
+  setItems(servicio.itemsServicio.length ? servicio.itemsServicio : [itemVacio()]);
+  setDocumentos(servicio.documentosAdjuntos ?? []);
+  setConvenioIdForm(servicio.convenioId ?? "");
+  setMostrarFormulario(true);
+}
 
   async function manejarGuardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -147,7 +170,13 @@ export default function Servicios() {
       setGuardando(false);
     }
   }
-
+function agregarDesdeTarifa(campo: keyof TarifaConvenio) {
+  if (!tarifaConvenio) return;
+  const valor = tarifaConvenio[campo] as number | undefined;
+  if (!valor) return;
+  const etiqueta = OPCIONES_TARIFA.find((o) => o.campo === campo)?.etiqueta ?? String(campo);
+  setItems((prev) => [...prev, { concepto: etiqueta, cantidad: 1, valorUnitario: valor, valorTotal: valor }]);
+}
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -175,9 +204,9 @@ export default function Servicios() {
               )
             )}
             <input name="fallecidoNombre" required defaultValue={editando?.fallecido.nombreCompleto} placeholder="Nombre del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="fallecidoCedula" defaultValue={editando?.fallecido.cedula} placeholder="Cédula del fallecido (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <select name="convenioId" required defaultValue={editando?.convenioId} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
-              <option value="">Convenio…</option>
+            <input name="fallecidoCedula" required defaultValue={editando?.fallecido.cedula} placeholder="Cédula del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <select name="convenioId" defaultValue={editando?.convenioId} onChange={(e) => setConvenioIdForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+              <option value="">Sin convenio (afiliado/particular)</option>
               {convenios.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre} ({c.tipo === "interno" ? "afiliado/particular" : c.tipo === "alcaldia" ? "alcaldía" : "empresa"})
@@ -205,6 +234,17 @@ export default function Servicios() {
               Usa bóveda
             </label>
           </div>
+          <select
+  defaultValue=""
+  onChange={(e) => { if (e.target.value) agregarDesdeTarifa(e.target.value as keyof TarifaConvenio); e.target.value = ""; }}
+  disabled={!tarifaConvenio}
+  className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50 disabled:text-tinta/40"
+>
+  <option value="">{tarifaConvenio ? "+ Agregar de la tarifa del convenio…" : "Elige un convenio arriba para ver su tarifa"}</option>
+  {tarifaConvenio && OPCIONES_TARIFA.filter((o) => tarifaConvenio[o.campo] !== undefined).map((o) => (
+    <option key={o.campo} value={o.campo}>{o.etiqueta} — {formatoPesos(tarifaConvenio[o.campo] as number)}</option>
+  ))}
+</select>
 
           {/* Agregar rápido desde catálogo — el precio se autocompleta; para cambiarlo, edita el valor unitario abajo */}
           <div className="grid gap-3 sm:grid-cols-2">
@@ -293,23 +333,35 @@ export default function Servicios() {
           { encabezado: "Convenio", render: (s: Servicio) => convenios.find((c) => c.id === s.convenioId)?.nombre ?? s.convenioId },
           { encabezado: "Valor", render: (s: Servicio) => formatoPesos(s.valorTotal) },
           {
-            encabezado: "Facturación",
-            render: (s: Servicio) => (
-              <span className={`rounded-full px-2.5 py-1 text-xs ${s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
-                  : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
-                    : "bg-amber-50 text-amber-700"
-                }`}>
-                {s.estadoFacturacion}
-              </span>
-            ),
-          },
+  encabezado: "Facturación",
+  render: (s: Servicio) => (
+    <Link to="/facturacion" className={`rounded-full px-2.5 py-1 text-xs hover:underline ${
+      s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
+      : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
+      : "bg-amber-50 text-amber-700"
+    }`}>
+      {s.estadoFacturacion}
+    </Link>
+  ),
+},
           {
-            encabezado: "",
+            encabezado: "Editar",
             render: (s: Servicio) => (
               <button onClick={() => abrirParaEditar(s)} className="text-vino-700 hover:underline">
                 <Pencil size={14} />
               </button>
             ),
+          },
+          {
+            encabezado: "Documentos",
+            render: (s: Servicio) =>
+              s.documentosAdjuntos?.length ? (
+                <a href={s.documentosAdjuntos[0]} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">
+                  Ver ({s.documentosAdjuntos.length})
+                </a>
+              ) : (
+                <span className="text-xs text-tinta/40">—</span>
+              ),
           },
         ]}
         filas={servicios}

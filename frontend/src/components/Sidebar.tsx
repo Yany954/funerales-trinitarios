@@ -12,20 +12,23 @@ import {
   BarChart3,
   X,
   UserCog,
+  Receipt,
 } from "lucide-react";
+import { useRol } from "../auth/RolContext";
 
 const items = [
-  { to: "/", label: "Inicio", icon: LayoutDashboard, end: true },
-  { to: "/afiliados", label: "Afiliados", icon: Users },
-  { to: "/servicios", label: "Servicios", icon: ClipboardList },
-  { to: "/convenios", label: "Convenios", icon: Handshake },
-  { to: "/cofres", label: "Cofres", icon: Package },
-  { to: "/inventario", label: "Inventario", icon: Warehouse },
-  { to: "/bovedas", label: "Bóvedas", icon: Landmark },
-  { to: "/flores", label: "Flores", icon: Flower2 },
-  { to: "/planes", label: "Planes funerarios", icon: CreditCard },
-  { to: "/reportes", label: "Reportes", icon: BarChart3 },
-  { to: "/usuarios", label: "Usuarios", icon: UserCog },
+  { to: "/", label: "Inicio", icon: LayoutDashboard, end: true, soloAdmin: false },
+  { to: "/afiliados", label: "Afiliados", icon: Users, soloAdmin: false },
+  { to: "/servicios", label: "Servicios", icon: ClipboardList, soloAdmin: false },
+  { to: "/facturacion", label: "Facturación", icon: Receipt, soloAdmin: false },
+  { to: "/convenios", label: "Convenios", icon: Handshake, soloAdmin: true },
+  { to: "/cofres", label: "Cofres", icon: Package, soloAdmin: true },
+  { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: false },
+  { to: "/bovedas", label: "Bóvedas", icon: Landmark, soloAdmin: false },
+  { to: "/flores", label: "Flores", icon: Flower2, soloAdmin: true },
+  { to: "/planes", label: "Planes funerarios", icon: CreditCard, soloAdmin: true },
+  { to: "/reportes", label: "Reportes", icon: BarChart3, soloAdmin: false },
+  { to: "/usuarios", label: "Usuarios", icon: UserCog, soloAdmin: true },
 ];
 
 interface Props {
@@ -34,6 +37,8 @@ interface Props {
 }
 
 export default function Sidebar({ abiertoEnMovil, onCerrar }: Props) {
+  const { rol } = useRol();
+  const itemsVisibles = items.filter((item) => !item.soloAdmin || rol === "admin");
   return (
     <>
       {/* Fondo oscuro detrás del panel cuando está abierto en móvil */}
@@ -65,7 +70,7 @@ export default function Sidebar({ abiertoEnMovil, onCerrar }: Props) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {items.map(({ to, label, icon: Icon, end }) => (
+           {itemsVisibles.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}

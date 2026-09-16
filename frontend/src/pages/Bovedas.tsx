@@ -7,6 +7,7 @@ import { formatoPesos } from "../utils/formato";
 import { useRol } from "../auth/RolContext";
 import type { Boveda, EstadoBoveda, Sede } from "../types";
 import { useSearchParams } from "react-router-dom";
+import { Copy, Check } from "lucide-react";
 
 const SEDES: Sede[] = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"];
 
@@ -33,6 +34,7 @@ export default function Bovedas() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idCopiado, setIdCopiado] = useState<string | null>(null);
 
   useEffect(() => {
     if (cargandoRol) return;
@@ -79,6 +81,11 @@ export default function Bovedas() {
     } finally {
       setGuardando(false);
     }
+  }
+  function copiarId(id: string) {
+    navigator.clipboard.writeText(id);
+    setIdCopiado(id);
+    setTimeout(() => setIdCopiado(null), 1500);
   }
 
   return (
@@ -158,12 +165,21 @@ export default function Bovedas() {
             render: (b: Boveda) => (
               <span
                 className={`rounded-full px-2.5 py-1 text-xs ${b.estado === "vigente" ? "bg-green-50 text-green-700"
-                    : b.estado === "por vencer" ? "bg-amber-50 text-amber-700"
-                      : "bg-red-50 text-red-700"
+                  : b.estado === "por vencer" ? "bg-amber-50 text-amber-700"
+                    : "bg-red-50 text-red-700"
                   }`}
               >
                 {b.estado}
               </span>
+            ),
+          },
+          {
+            encabezado: "Servicio",
+            render: (b: Boveda) => (
+              <button onClick={() => copiarId(b.servicioId)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
+                {b.servicioId.slice(0, 8)}…
+                {idCopiado === b.servicioId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+              </button>
             ),
           },
         ]}

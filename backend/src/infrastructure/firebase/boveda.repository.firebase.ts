@@ -44,11 +44,6 @@ export class BovedaRepositoryFirestore implements BovedaRepository {
     await ref.update(aFirestore(data));
   }
 
-  async eliminar(id: string): Promise<void> {
-    const ref = db.collection(BOVEDAS).doc(id);
-    await ref.delete();
-  }
-
   async actualizarEstado(
     bovedaId: string,
     nuevoEstado: EstadoBoveda,
@@ -60,5 +55,22 @@ export class BovedaRepositoryFirestore implements BovedaRepository {
       metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
     });
   }
-  
+  async obtenerPorServicioId(servicioId: string): Promise<Boveda | null> {
+    const snap = await db.collection(BOVEDAS).where("servicioId", "==", servicioId).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      fechaInicio: data.fechaInicio.toDate(),
+      fechaLimite: data.fechaLimite.toDate(),
+      metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
+    } as Boveda;
+  }
+
+  async eliminar(id: string): Promise<void> {
+    await db.collection(BOVEDAS).doc(id).delete();
+  }
+
 }
