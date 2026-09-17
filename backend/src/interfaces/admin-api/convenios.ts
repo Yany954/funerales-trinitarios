@@ -4,6 +4,7 @@ import { ConveniosRepositoryFirestore } from "../../infrastructure/firebase/conv
 import { crearConvenio, CrearConvenioInput } from "../../application/convenios/crearConvenio.usecase";
 import { guardarTarifa, GuardarTarifaInput } from "../../application/convenios/guardarTarifa.usecase";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
+import { actualizarConvenio, ActualizarConvenioInput } from "../../application/convenios/actualizarConvenio.usecase";
 
 const repo = new ConveniosRepositoryFirestore();
 
@@ -25,4 +26,11 @@ export const guardarTarifaFn = onCall<GuardarTarifaInput>(async (request) => {
   exigirAdmin(request);
   await guardarTarifa(repo, request.data, metadataHumano(uid));
   return { ok: true };
+});
+
+export const actualizarConvenioFn = onCall<ActualizarConvenioInput>(async (request) => {
+  const uid = requireAuth(request);
+  exigirAdmin(request);
+  const convenio = await actualizarConvenio(repo, request.data, metadataHumano(uid));
+  return { convenio };
 });

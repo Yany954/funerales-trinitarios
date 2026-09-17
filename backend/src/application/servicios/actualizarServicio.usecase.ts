@@ -7,7 +7,9 @@ import { vincularBovedaAServicio, desvincularBovedaDeServicio } from "../boveda/
 export interface ActualizarServicioInput {
   id: string;
   fechaServicio?: string;
-  convenioId?: string;
+    convenioId?: string;
+  esAfiliado?: boolean;
+  cedulaTitular?: string;
   fallecido?: { nombreCompleto: string; cedula?: string };
   tipoServicio?: Servicio["tipoServicio"];
   tipoTraslado?: Servicio["tipoTraslado"];
@@ -26,6 +28,9 @@ export async function actualizarServicio(
 ): Promise<Servicio> {
   const actual = await repo.obtenerPorId(input.id);
   if (!actual) throw new Error("Ese servicio no existe.");
+  if (input.esAfiliado && !input.cedulaTitular && !actual.cedulaTitular) {
+  throw new Error("La cédula del titular del plan es obligatoria cuando el servicio es de un afiliado.");
+}
 
   const cambios: Partial<Omit<Servicio, "id">> = { metadata };
   if (input.fechaServicio) cambios.fechaServicio = new Date(input.fechaServicio);
@@ -41,6 +46,8 @@ export async function actualizarServicio(
   }
   if (input.documentosAdjuntos) cambios.documentosAdjuntos = input.documentosAdjuntos;
   if (input.observaciones !== undefined) cambios.observaciones = input.observaciones;
+if (input.esAfiliado !== undefined) cambios.esAfiliado = input.esAfiliado;
+if (input.cedulaTitular) cambios.cedulaTitular = input.cedulaTitular;
 
   const actualizado = await repo.actualizar(input.id, cambios);
 

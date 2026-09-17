@@ -34,6 +34,14 @@
       ]
     },
     {
+  "collectionGroup": "servicios",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "cedulaTitular", "order": "ASCENDING" },
+    { "fieldPath": "fechaServicio", "order": "DESCENDING" }
+  ]
+},
+    {
       "collectionGroup": "afiliados",
       "queryScope": "COLLECTION",
       "fields": [

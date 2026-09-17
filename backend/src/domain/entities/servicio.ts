@@ -39,4 +39,6 @@ export interface Servicio {
   facturaURL?: string;
   comprobantePagoURL?: string;
   metadata: MetadataCambio;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
 }

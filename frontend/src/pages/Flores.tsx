@@ -7,6 +7,7 @@ import SubirFoto from "../components/SubirFoto";
 import { formatoPesos } from "../utils/formato";
 import { confirmarEliminar } from "../utils/confirmar";
 import type { Flor } from "../types";
+import CampoPrecio from "../components/CampoPrecio";
 
 export default function Flores() {
   const [flores, setFlores] = useState<Flor[]>([]);
@@ -88,8 +89,8 @@ export default function Flores() {
           <p className="text-sm font-medium text-vino-900">{editando ? `Editando: ${editando.nombre}` : "Nueva flor"}</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <input name="nombre" required defaultValue={editando?.nombre} placeholder="Nombre (ej. Ramo pequeño)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="precioCosto" type="number" required defaultValue={editando?.precioCosto} placeholder="Precio costo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="precioPublico" type="number" required defaultValue={editando?.precioPublico} placeholder="Precio público" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <CampoPrecio name="precioCosto" required valorInicial={editando?.precioCosto} placeholder="Precio costo" />
+            <CampoPrecio name="precioPublico" required valorInicial={editando?.precioPublico} placeholder="Precio público" />
           </div>
           <SubirFoto carpeta="flores" valorActual={editando?.fotoURL} onSubido={setFotoURL} />
           {error && <p className="text-sm text-red-600">{error}</p>}

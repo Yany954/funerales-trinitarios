@@ -1,30 +1,41 @@
 import { useEffect, useState, FormEvent } from "react";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Search, UserPlus } from "lucide-react";
+import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
-import type { Afiliado, PersonaCubierta, PlanFunerario } from "../types";
+import type { Afiliado, Beneficiario, PlanFunerario, ResultadoBusquedaAfiliado } from "../types";
 import { useRol } from "../auth/RolContext";
 import PanelPagos from "../components/PanelPagos";
 import { Receipt } from "lucide-react";
 import { formatoPesos } from "../utils/formato";
+import PanelBeneficiarios from "../components/PanelBeneficiarios";
+import { Users } from "lucide-react";
+import PanelEditarAfiliado from "../components/PanelEditarAfiliado";
+import { eliminarAfiliado } from "../api/client";
+import { confirmarEliminar } from "../utils/confirmar";
+import PanelHistorialServicios from "../components/PanelHistorialServicios";
+
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [cargando, setCargando] = useState(true);
 
   const [termino, setTermino] = useState("");
-  const [resultadosBusqueda, setResultadosBusqueda] = useState<PersonaCubierta[] | null>(null);
   const [buscando, setBuscando] = useState(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { rol, sedeAsignada, sedeSeleccionada, cargando: cargandoRol } = useRol();
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
   const [planes, setPlanes] = useState<PlanFunerario[]>([]);
   const [mapaPlanes, setMapaPlanes] = useState<Record<string, string>>({});
   const [afiliadoPagos, setAfiliadoPagos] = useState<Afiliado | null>(null);
+  const [beneficiariosNuevo, setBeneficiariosNuevo] = useState<Beneficiario[]>([]);
+  const [afiliadoBeneficiarios, setAfiliadoBeneficiarios] = useState<Afiliado | null>(null);
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<ResultadoBusquedaAfiliado[] | null>(null);
+  const [afiliadoEditando, setAfiliadoEditando] = useState<Afiliado | null>(null);
+  const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
+
   useEffect(() => {
     return onSnapshot(
       query(collection(db, "planes_funerarios")),
@@ -40,7 +51,6 @@ export default function Afiliados() {
     );
   }, []);
 
-  // Lectura en tiempo real — solo lectura, ver nota en api/client.ts
   useEffect(() => {
     const base = collection(db, "afiliados");
     const q = sedeSeleccionada === "all"
@@ -52,6 +62,8 @@ export default function Afiliados() {
     }, (err) => console.error("Error en la consulta:", err));
     return unsub;
   }, [sedeSeleccionada]);
+
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
 
   async function manejarBusqueda(e: FormEvent) {
     e.preventDefault();
@@ -67,7 +79,15 @@ export default function Afiliados() {
       setBuscando(false);
     }
   }
-
+  async function manejarEliminarAfiliado(a: Afiliado) {
+    const confirmado = await confirmarEliminar(a.nombreCompleto);
+    if (!confirmado) return;
+    try {
+      await eliminarAfiliado(a.id);
+    } catch (err) {
+      console.error("Error eliminando afiliado:", err);
+    }
+  }
   async function manejarCrear(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -77,17 +97,26 @@ export default function Afiliados() {
       await crearAfiliado({
         nombreCompleto: String(form.get("nombreCompleto")),
         cedula: String(form.get("cedula")),
+        numeroContrato: String(form.get("numeroContrato")), // ← nuevo
         planId: String(form.get("planId")),
-        beneficiarios: [],
+        beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim() && b.cedula.trim()),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
       setMostrarFormulario(false);
+      setBeneficiariosNuevo([]);
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el afiliado.");
     } finally {
       setGuardando(false);
     }
+  }
+  function actualizarBeneficiarioNuevo(i: number, campo: keyof Beneficiario, valor: string) {
+    setBeneficiariosNuevo((prev) => {
+      const copia = [...prev];
+      copia[i] = { ...copia[i], [campo]: valor };
+      return copia;
+    });
   }
 
   return (
@@ -114,24 +143,30 @@ export default function Afiliados() {
       {buscando && <p className="text-sm text-tinta/50">Buscando…</p>}
 
       {resultadosBusqueda && !buscando && (
-        <div className="rounded-xl border border-vino-100 bg-white p-4">
+        <div className="space-y-3">
           {resultadosBusqueda.length === 0 ? (
-            <p className="text-sm text-tinta/60">
-              Nadie con ese nombre o cédula tiene plan con nosotros.
-            </p>
+            <div className="rounded-xl border border-vino-100 bg-white p-4">
+              <p className="text-sm text-tinta/60">Nadie con ese nombre o cédula tiene plan con nosotros.</p>
+            </div>
           ) : (
-            <ul className="divide-y divide-vino-50">
-              {resultadosBusqueda.map((r) => (
-                <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>
-                    {r.nombreCompleto} · {r.cedula}
-                  </span>
+            resultadosBusqueda.map(({ persona, afiliado }) => (
+              <div key={persona.id} className="rounded-xl border border-vino-100 bg-white p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="font-display text-base text-vino-900">{afiliado.nombreCompleto}</p>
                   <span className="rounded-full bg-vino-50 px-2.5 py-1 text-xs text-vino-700">
-                    {r.esTitular ? "Titular" : `Beneficiario (${r.parentesco})`}
+                    {persona.esTitular ? "Titular" : `Encontrado como beneficiario (${persona.parentesco})`}
                   </span>
-                </li>
-              ))}
-            </ul>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-tinta/70 sm:grid-cols-3">
+                  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
+                  <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
+                  <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
+                  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
+                  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
+                  <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -158,6 +193,7 @@ export default function Afiliados() {
                 <option key={p.id} value={p.id}>{p.nombre} — {formatoPesos(p.valorMensual)}/mes</option>
               ))}
             </select>
+            <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
               <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                 <option value="">Sede…</option>
@@ -173,6 +209,26 @@ export default function Afiliados() {
               <input type="checkbox" name="tieneSeguroVida" />
               Tiene seguro de vida
             </label>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-vino-900">Beneficiarios (opcional)</p>
+            {beneficiariosNuevo.map((b, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2">
+                <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <input placeholder="Parentesco" value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="text-tinta/40 hover:text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setBeneficiariosNuevo((prev) => [...prev, { nombre: "", parentesco: "", cedula: "" }])}
+              className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline"
+            >
+              <Plus size={14} /> Agregar beneficiario
+            </button>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
@@ -190,6 +246,7 @@ export default function Afiliados() {
           { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto },
           { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
           { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
+          { encabezado: "N° Contrato", render: (a: Afiliado) => a.numeroContrato },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (
@@ -206,10 +263,37 @@ export default function Afiliados() {
             ),
           },
           {
+            encabezado: "Beneficiarios",
+            render: (a: Afiliado) => (
+              <button onClick={() => setAfiliadoBeneficiarios(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
+                <Users size={14} /> {a.beneficiarios?.length ?? 0}
+              </button>
+            ),
+          },
+          {
+            encabezado: "Acciones",
+            render: (a: Afiliado) => (
+              <div className="flex gap-2">
+                <button onClick={() => setAfiliadoEditando(a)} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
+                {rol === "admin" && (
+                  <button onClick={() => manejarEliminarAfiliado(a)} className="text-red-600 hover:underline"><Trash2 size={14} /></button>
+                )}
+              </div>
+            ),
+          },
+          {
             encabezado: "Pagos",
             render: (a: Afiliado) => (
               <button onClick={() => setAfiliadoPagos(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
                 <Receipt size={14} /> Ver
+              </button>
+            ),
+          },
+          {
+            encabezado: "Servicios",
+            render: (a: Afiliado) => (
+              <button onClick={() => setAfiliadoServicios(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
+                <ClipboardList size={14} /> Ver
               </button>
             ),
           },
@@ -220,6 +304,9 @@ export default function Afiliados() {
         vacioTitulo="Todavía no hay afiliados registrados"
         vacioDescripcion='Usa "Nuevo afiliado" para agregar el primero.'
       />
+      {afiliadoServicios && <PanelHistorialServicios afiliado={afiliadoServicios} onCerrar={() => setAfiliadoServicios(null)} />}
+      {afiliadoEditando && <PanelEditarAfiliado afiliado={afiliadoEditando} planes={planes} onCerrar={() => setAfiliadoEditando(null)} />}
+      {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
       {afiliadoPagos && <PanelPagos afiliado={afiliadoPagos} onCerrar={() => setAfiliadoPagos(null)} />}
     </div>
   );

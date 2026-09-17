@@ -6,3 +6,8 @@ export interface PlanFunerario {
   valorMensual: number;
   metadata: MetadataCambio;
 }
+export interface HistorialPrecioPlan {
+  anio: string;
+  valorMensual: number;
+  metadata: MetadataCambio;
+}

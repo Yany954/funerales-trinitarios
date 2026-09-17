@@ -7,6 +7,7 @@ import SubirFoto from "../components/SubirFoto";
 import { confirmarEliminar } from "../utils/confirmar";
 import type { TipoCofre, CategoriaCofre } from "../types";
 import { formatoPesos, formatoTamano } from "../utils/formato";
+import CampoPrecio from "../components/CampoPrecio";
 
 const ETIQUETA_NIVEL: Record<NonNullable<TipoCofre["nivel"]>, string> = { basico: "Básico", semilujo: "Semilujo", lujo: "Lujo" };
 const ETIQUETA_CATEGORIA: Record<CategoriaCofre, string> = { estandar: "Estándar", ancho: "Ancho (talla grande)", infantil: "Infantil" };
@@ -149,7 +150,7 @@ export default function Cofres() {
             )}
 
             <input name="referencia" required defaultValue={editando?.referencia} placeholder="Referencia" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="precio" type="number" required defaultValue={editando?.precio} placeholder="Precio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <CampoPrecio name="precio" required valorInicial={editando?.precio} placeholder="Precio" />
             <input name="descripcion" defaultValue={editando?.descripcion} placeholder="Descripción (material, acabado)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
           </div>
           <SubirFoto carpeta="cofres" valorActual={editando?.fotoURL} onSubido={setFotoURL} />

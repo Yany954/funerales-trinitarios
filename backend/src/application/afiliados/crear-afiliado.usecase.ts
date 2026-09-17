@@ -8,6 +8,7 @@ export interface CrearAfiliadoInput {
   cedula: string;
   planId: string;
   sede: Sede;
+  numeroContrato: string;
   beneficiarios: Afiliado["beneficiarios"];
   tieneSeguroVida: boolean;
   aseguradora?: string;
@@ -36,6 +37,7 @@ export async function crearAfiliado(
     tieneSeguroVida: input.tieneSeguroVida,
     aseguradora: input.aseguradora,
     observaciones: input.observaciones,
+    numeroContrato: input.numeroContrato,
     metadata,
     sede: input.sede,
   };

@@ -5,7 +5,7 @@ export type EstadoBoveda = "vigente" | "por vencer" | "vencida";
 
 export interface Boveda {
   id: string;
-  servicioId: string;
+  servicioId?: string;
   sede: Sede;
   zona: string;
   fechaInicio: Date;

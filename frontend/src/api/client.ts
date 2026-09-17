@@ -11,10 +11,10 @@ import {
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
-import type { CrearAfiliadoInput, PersonaCubierta, Afiliado } from "../types";
+import type { CrearAfiliadoInput, Afiliado, GuardarPrecioAnioInput, ActualizarPlanInput, ServicioResumen } from "../types";
 import type { RegistrarBovedaInput, Boveda, EstadoBoveda } from "../types";
 import type { RegistrarServicioInput, Servicio } from "../types";
-import type { CrearConvenioInput, GuardarTarifaInput, Convenio } from "../types";
+import type { CrearConvenioInput, GuardarTarifaInput, Convenio, ActualizarConvenioInput } from "../types";
 import type { CrearTipoCofreInput, TipoCofre } from "../types";
 import type { CrearPlanInput, PlanFunerario } from "../types";
 import type { CrearFlorInput, Flor } from "../types";
@@ -27,7 +27,9 @@ import type { RegistrarPagoInput, Pago } from "../types";
 import type { UsuarioListado, CrearUsuarioInput } from "../types";
 import type { ActualizarFlorInput } from "../types";
 import type { CambiarEstadoFacturacionInput } from "../types";
-
+import type { ActualizarBeneficiariosInput } from "../types";
+import type { ResultadoBusquedaAfiliado } from "../types";
+import type { ActualizarAfiliadoInput } from "../types";
 
 
 const runningLocally =
@@ -86,14 +88,26 @@ export async function crearAfiliado(input: CrearAfiliadoInput): Promise<Afiliado
   const res = await fn(input);
   return res.data.afiliado;
 }
+export async function actualizarAfiliado(input: ActualizarAfiliadoInput): Promise<Afiliado> {
+  const fn = httpsCallable<ActualizarAfiliadoInput, { afiliado: Afiliado }>(functions, "actualizarAfiliadoFn");
+  const res = await fn(input);
+  return res.data.afiliado;
+}
 
-export async function buscarPersonaCubierta(termino: string): Promise<PersonaCubierta[]> {
-  const fn = httpsCallable<{ termino: string }, { resultados: PersonaCubierta[] }>(
-    functions,
-    "buscarPersonaCubiertaFn"
-  );
+export async function eliminarAfiliado(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarAfiliadoFn");
+  await fn({ id });
+}
+
+export async function buscarPersonaCubierta(termino: string): Promise<ResultadoBusquedaAfiliado[]> {
+  const fn = httpsCallable<{ termino: string }, { resultados: ResultadoBusquedaAfiliado[] }>(functions, "buscarPersonaCubiertaFn");
   const res = await fn({ termino });
   return res.data.resultados;
+}
+export async function actualizarBeneficiarios(input: ActualizarBeneficiariosInput): Promise<Afiliado> {
+  const fn = httpsCallable<ActualizarBeneficiariosInput, { afiliado: Afiliado }>(functions, "actualizarBeneficiariosFn");
+  const res = await fn(input);
+  return res.data.afiliado;
 }
 
 
@@ -114,7 +128,15 @@ export async function registrarServicio(input: RegistrarServicioInput): Promise<
   const res = await fn(input);
   return res.data.servicio;
 }
-
+export async function eliminarServicio(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarServicioFn");
+  await fn({ id });
+}
+export async function listarServiciosPorAfiliado(cedula: string): Promise<ServicioResumen[]> {
+  const fn = httpsCallable<{ cedula: string }, { servicios: ServicioResumen[] }>(functions, "listarServiciosPorAfiliadoFn");
+  const res = await fn({ cedula });
+  return res.data.servicios;
+}
 export async function crearConvenio(input: CrearConvenioInput): Promise<Convenio> {
   const fn = httpsCallable<CrearConvenioInput, { convenio: Convenio }>(functions, "crearConvenioFn");
   const res = await fn(input);
@@ -125,7 +147,11 @@ export async function guardarTarifa(input: GuardarTarifaInput): Promise<void> {
   const fn = httpsCallable<GuardarTarifaInput, { ok: boolean }>(functions, "guardarTarifaFn");
   await fn(input);
 }
-
+export async function actualizarConvenio(input: ActualizarConvenioInput): Promise<Convenio> {
+  const fn = httpsCallable<ActualizarConvenioInput, { convenio: Convenio }>(functions, "actualizarConvenioFn");
+  const res = await fn(input);
+  return res.data.convenio;
+}
 export async function crearTipoCofre(input: CrearTipoCofreInput): Promise<TipoCofre> {
   const fn = httpsCallable<CrearTipoCofreInput, { cofre: TipoCofre }>(functions, "crearTipoCofreFn");
   const res = await fn(input);
@@ -137,7 +163,16 @@ export async function crearPlan(input: CrearPlanInput): Promise<PlanFunerario> {
   const res = await fn(input);
   return res.data.plan;
 }
+export async function actualizarPlan(input: ActualizarPlanInput): Promise<PlanFunerario> {
+  const fn = httpsCallable<ActualizarPlanInput, { plan: PlanFunerario }>(functions, "actualizarPlanFn");
+  const res = await fn(input);
+  return res.data.plan;
+}
 
+export async function guardarPrecioAnioPlan(input: GuardarPrecioAnioInput): Promise<void> {
+  const fn = httpsCallable<GuardarPrecioAnioInput, { ok: boolean }>(functions, "guardarPrecioAnioFn");
+  await fn(input);
+}
 export async function crearFlor(input: CrearFlorInput): Promise<Flor> {
   const fn = httpsCallable<CrearFlorInput, { flor: Flor }>(functions, "crearFlorFn");
   const res = await fn(input);

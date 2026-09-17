@@ -4,7 +4,7 @@ import { BovedaRepository } from "../ports/boveda.repository";
 import { Sede } from "../../domain/value-objects/rol-usuario";
 
 export interface RegistrarBovedaInput {
-  servicioId: string;
+  servicioId?: string;
   sede: Sede;
   zona: string;
   fechaInicio: string;

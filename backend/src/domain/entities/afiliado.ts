@@ -27,6 +27,7 @@ export interface Afiliado {
   tieneSeguroVida: boolean;
   aseguradora?: string;
   observaciones?: string;
+  numeroContrato: string;
   metadata: MetadataCambio;
 }
 

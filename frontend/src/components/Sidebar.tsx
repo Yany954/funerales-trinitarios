@@ -19,15 +19,15 @@ import { useRol } from "../auth/RolContext";
 const items = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, end: true, soloAdmin: false },
   { to: "/afiliados", label: "Afiliados", icon: Users, soloAdmin: false },
-  { to: "/servicios", label: "Servicios", icon: ClipboardList, soloAdmin: false },
-  { to: "/facturacion", label: "Facturación", icon: Receipt, soloAdmin: false },
+  { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: false },
+  { to: "/servicios", label: "Servicios", icon: ClipboardList, soloAdmin: true },
+  { to: "/facturacion", label: "Facturación", icon: Receipt, soloAdmin: true },
   { to: "/convenios", label: "Convenios", icon: Handshake, soloAdmin: true },
   { to: "/cofres", label: "Cofres", icon: Package, soloAdmin: true },
-  { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: false },
-  { to: "/bovedas", label: "Bóvedas", icon: Landmark, soloAdmin: false },
+  { to: "/bovedas", label: "Bóvedas", icon: Landmark, soloAdmin: true },
   { to: "/flores", label: "Flores", icon: Flower2, soloAdmin: true },
   { to: "/planes", label: "Planes funerarios", icon: CreditCard, soloAdmin: true },
-  { to: "/reportes", label: "Reportes", icon: BarChart3, soloAdmin: false },
+  { to: "/reportes", label: "Reportes", icon: BarChart3, soloAdmin: true },
   { to: "/usuarios", label: "Usuarios", icon: UserCog, soloAdmin: true },
 ];
 

@@ -35,9 +35,17 @@ export class ConveniosRepositoryFirestore implements ConveniosRepository {
       });
   }
   async obtenerPorId(id: string): Promise<Convenio | null> {
-  const doc = await db.collection(CONVENIOS).doc(id).get();
-  if (!doc.exists) return null;
-  const data = doc.data()!;
-  return { id: doc.id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Convenio;
-}
+    const doc = await db.collection(CONVENIOS).doc(id).get();
+    if (!doc.exists) return null;
+    const data = doc.data()!;
+    return { id: doc.id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Convenio;
+  }
+  async actualizar(id: string, cambios: Partial<Omit<Convenio, "id">>): Promise<Convenio> {
+    const datos: any = { ...cambios };
+    if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
+    await db.collection(CONVENIOS).doc(id).update(datos);
+    const doc = await db.collection(CONVENIOS).doc(id).get();
+    const data = doc.data()!;
+    return { id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Convenio;
+  }
 }

@@ -45,29 +45,33 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
   async sincronizarPersonasCubiertas(afiliado: Afiliado): Promise<void> {
     const batch = db.batch();
 
-    // Documento del titular — un ID predecible para poder actualizarlo sin duplicar.
     const titularRef = db.collection(PERSONAS_CUBIERTAS).doc(`titular_${afiliado.id}`);
-    const titular: Omit<PersonaCubierta, "id"> = {
+    batch.set(titularRef, {
       nombreCompleto: afiliado.nombreCompleto,
       nombreBusqueda: afiliado.nombreCompleto.toLowerCase(),
       cedula: afiliado.cedula,
       esTitular: true,
       afiliadoId: afiliado.id,
-    };
-    batch.set(titularRef, titular);
+    });
 
-    // Un documento por cada beneficiario.
+    // Borra los beneficiarios anteriores antes de recrear — así, si editaste
+    // y quitaste alguno, no queda un registro huérfano todavía buscable.
+    const existentes = await db.collection(PERSONAS_CUBIERTAS)
+      .where("afiliadoId", "==", afiliado.id)
+      .where("esTitular", "==", false)
+      .get();
+    existentes.docs.forEach((d) => batch.delete(d.ref));
+
     afiliado.beneficiarios.forEach((beneficiario, i) => {
       const ref = db.collection(PERSONAS_CUBIERTAS).doc(`beneficiario_${afiliado.id}_${i}`);
-      const persona: Omit<PersonaCubierta, "id"> = {
+      batch.set(ref, {
         nombreCompleto: beneficiario.nombre,
         nombreBusqueda: beneficiario.nombre.toLowerCase(),
         cedula: beneficiario.cedula,
         esTitular: false,
         parentesco: beneficiario.parentesco,
         afiliadoId: afiliado.id,
-      };
-      batch.set(ref, persona);
+      });
     });
 
     await batch.commit();
@@ -98,26 +102,44 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     return porNombre.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PersonaCubierta, "id">) }));
   }
   async listarTodos(): Promise<Afiliado[]> {
-  const snap = await db.collection(AFILIADOS).get();
-  return snap.docs.map((d) => deFirestore(d.id, d.data()));
-}
+    const snap = await db.collection(AFILIADOS).get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
 
-async actualizarEstadoPlan(id: string, estado: Afiliado["estadoPlan"], metadata: MetadataCambio): Promise<void> {
-  await db.collection(AFILIADOS).doc(id).update({
-    estadoPlan: estado,
-    metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
-  });
-}
+  async actualizarEstadoPlan(id: string, estado: Afiliado["estadoPlan"], metadata: MetadataCambio): Promise<void> {
+    await db.collection(AFILIADOS).doc(id).update({
+      estadoPlan: estado,
+      metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
+    });
+  }
 
-async actualizarUltimoPago(
-  afiliadoId: string,
-  ultimoPago: { fecha: Date; valor: number; metodo: string },
-  metadata: MetadataCambio
-): Promise<void> {
-  await db.collection(AFILIADOS).doc(afiliadoId).update({
-    ultimoPago: { ...ultimoPago, fecha: Timestamp.fromDate(ultimoPago.fecha) },
-    estadoPlan: "activo",
-    metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
-  });
-}
+  async actualizarUltimoPago(
+    afiliadoId: string,
+    ultimoPago: { fecha: Date; valor: number; metodo: string },
+    metadata: MetadataCambio
+  ): Promise<void> {
+    await db.collection(AFILIADOS).doc(afiliadoId).update({
+      ultimoPago: { ...ultimoPago, fecha: Timestamp.fromDate(ultimoPago.fecha) },
+      estadoPlan: "activo",
+      metadata: { ...metadata, fecha: Timestamp.fromDate(metadata.fecha) },
+    });
+  }
+  async actualizar(id: string, cambios: Partial<Omit<Afiliado, "id">>): Promise<Afiliado> {
+    const datos: any = { ...cambios };
+    if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
+    if (cambios.fechaAfiliacion) datos.fechaAfiliacion = Timestamp.fromDate(cambios.fechaAfiliacion);
+    if (cambios.ultimoPago) datos.ultimoPago = { ...cambios.ultimoPago, fecha: Timestamp.fromDate(cambios.ultimoPago.fecha) };
+    await db.collection(AFILIADOS).doc(id).update(datos);
+    const doc = await db.collection(AFILIADOS).doc(id).get();
+    return deFirestore(doc.id, doc.data()!);
+  }
+  async eliminar(id: string): Promise<void> {
+    const batch = db.batch();
+    batch.delete(db.collection(AFILIADOS).doc(id));
+
+    const personas = await db.collection(PERSONAS_CUBIERTAS).where("afiliadoId", "==", id).get();
+    personas.docs.forEach((d) => batch.delete(d.ref));
+
+    await batch.commit();
+  }
 }

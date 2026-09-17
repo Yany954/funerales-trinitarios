@@ -15,4 +15,6 @@ export interface AfiliadosRepository {
   listarTodos(): Promise<Afiliado[]>;
   actualizarEstadoPlan(id: string, estado: Afiliado["estadoPlan"], metadata: MetadataCambio): Promise<void>;
   actualizarUltimoPago(afiliadoId: string, ultimoPago: { fecha: Date; valor: number; metodo: string }, metadata: MetadataCambio): Promise<void>;
+  actualizar(id: string, cambios: Partial<Omit<Afiliado, "id">>): Promise<Afiliado>;
+  eliminar(id: string): Promise<void>;
 }

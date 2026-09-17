@@ -20,7 +20,14 @@ service cloud.firestore {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;
     }
-
+    match /{path=**}/tarifas/{tarifaId} {
+      allow read: if estaAutenticado();
+      allow write: if false;
+    }
+    match /{path=**}/historial/{anioId} {
+      allow read: if estaAutenticado();
+      allow write: if false;
+    }
     // Solo administradores (ej. cofres, precios)
     match /tipos_cofre/{id} {
       allow read: if estaAutenticado() && esAdmin();

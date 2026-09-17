@@ -60,17 +60,28 @@ export class ServiciosRepositoryFirestore implements ServiciosRepository {
     return snap.docs.map((d) => deFirestore(d.id, d.data()));
   }
   async obtenerPorId(id: string): Promise<Servicio | null> {
-  const doc = await db.collection(SERVICIOS).doc(id).get();
-  if (!doc.exists) return null;
-  return deFirestore(doc.id, doc.data()!);
-}
+    const doc = await db.collection(SERVICIOS).doc(id).get();
+    if (!doc.exists) return null;
+    return deFirestore(doc.id, doc.data()!);
+  }
 
-async actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio> {
-  const datos: any = { ...cambios };
-  if (cambios.fechaServicio) datos.fechaServicio = Timestamp.fromDate(cambios.fechaServicio);
-  if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
-  await db.collection(SERVICIOS).doc(id).update(datos);
-  return (await this.obtenerPorId(id))!;
+  async actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio> {
+    const datos: any = { ...cambios };
+    if (cambios.fechaServicio) datos.fechaServicio = Timestamp.fromDate(cambios.fechaServicio);
+    if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
+    await db.collection(SERVICIOS).doc(id).update(datos);
+    return (await this.obtenerPorId(id))!;
+  }
+  async eliminar(id: string): Promise<void> {
+    await db.collection(SERVICIOS).doc(id).delete();
+  }
+  
+  async buscarPorCedulaTitular(cedula: string): Promise<Servicio[]> {
+  const snap = await db.collection(SERVICIOS)
+    .where("cedulaTitular", "==", cedula)
+    .orderBy("fechaServicio", "desc")
+    .get();
+  return snap.docs.map((d) => deFirestore(d.id, d.data()));
 }
 
 }

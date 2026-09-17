@@ -11,22 +11,30 @@ export interface Afiliado {
   id: string;
   nombreCompleto: string;
   cedula: string;
+  numeroContrato: string;
   planId: string;
   estadoPlan: "activo" | "inactivo" | "en mora";
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
   sede: Sede;
 }
+export interface ActualizarAfiliadoInput { id: string; nombreCompleto?: string; cedula?: string; numeroContrato?: string; planId?: string; tieneSeguroVida?: boolean; aseguradora?: string; observaciones?: string; }
+export interface ResultadoBusquedaAfiliado {
+  persona: PersonaCubierta;
+  afiliado: Afiliado;
+}
 
 export interface CrearAfiliadoInput {
   nombreCompleto: string;
   cedula: string;
+  numeroContrato: string;
   planId: string;
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
   aseguradora?: string;
   observaciones?: string;
 }
+export interface ActualizarBeneficiariosInput { afiliadoId: string; beneficiarios: Beneficiario[]; }
 
 export interface PersonaCubierta {
   id: string;
@@ -49,7 +57,7 @@ export type EstadoBoveda = "vigente" | "por vencer" | "vencida";
 
 export interface Boveda {
   id: string;
-  servicioId: string;
+  servicioId?: string;
   zona: string;
   fechaInicio: string;   // yyyy-mm-dd
   fechaLimite: string;   // yyyy-mm-dd, calculada por el backend
@@ -60,7 +68,7 @@ export interface Boveda {
 }
 
 export interface RegistrarBovedaInput {
-  servicioId: string;
+  servicioId?: string;
   zona: string;
   fechaInicio: string; // tal como lo da un <input type="date">
   valorArriendo: number;
@@ -95,8 +103,19 @@ export interface Servicio {
   documentosAdjuntos: string[];
   facturaURL?: string;
   comprobantePagoURL?: string;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
 }
-
+export interface ServicioResumen {
+  id: string;
+  fechaServicio: string;
+  sede: string;
+  tipoServicio: string;
+  valorTotal: number;
+  estadoFacturacion: string;
+  facturaURL?: string;
+  comprobantePagoURL?: string;
+}
 export interface RegistrarServicioInput {
   fechaServicio: string;
   sede: Sede;
@@ -109,6 +128,8 @@ export interface RegistrarServicioInput {
   tuvoMisaOCulto: "misa" | "culto" | "ninguno";
   itemsServicio: ItemServicio[];
   observaciones?: string;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
 }
 export type TipoConvenio = "empresa_exequial" | "alcaldia" | "interno";
 
@@ -141,6 +162,8 @@ export interface CrearConvenioInput {
 export interface GuardarTarifaInput extends TarifaConvenio {
   convenioId: string;
 }
+export interface ActualizarConvenioInput { id: string; nombre?: string; tipo?: TipoConvenio; numeroContrato?: string; coberturaGeografica?: string[]; }
+
 export type NivelCofre = "basico" | "semilujo" | "lujo";
 export type CategoriaCofre = "estandar" | "ancho" | "infantil";
 
@@ -159,6 +182,9 @@ export interface ActualizarTipoCofreInput { id: string; categoria?: CategoriaCof
 
 export interface PlanFunerario { id: string; nombre: string; valorMensual: number; }
 export interface CrearPlanInput { nombre: string; valorMensual: number; }
+export interface ActualizarPlanInput { id: string; nombre?: string; }
+export interface GuardarPrecioAnioInput { planId: string; anio: string; valorMensual: number; }
+export interface HistorialPrecioPlan { anio: string; valorMensual: number; planId: string; }
 
 export interface Flor { id: string; nombre: string; fotoURL?: string; precioCosto: number; precioPublico: number; }
 export interface CrearFlorInput { nombre: string; precioCosto: number; precioPublico: number; fotoURL?: string; }
@@ -194,6 +220,8 @@ export interface ActualizarServicioInput {
   itemsServicio?: ItemServicio[];
   documentosAdjuntos?: string[];
   observaciones?: string;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
 }
 export interface Pago {
   id: string;

@@ -4,12 +4,13 @@ import { vincularBovedaAServicio } from "../boveda/vincularBovedaServicio.usecas
 import { BovedaRepository } from "../ports/boveda.repository";
 import { ServiciosRepository } from "../ports/servicios.repository";
 
-
 export interface RegistrarServicioInput {
   fechaServicio: string;
   sede: Servicio["sede"];
   convenioId: string;
   afiliadoId?: string;
+  esAfiliado: boolean; // ← nuevo
+  cedulaTitular?: string; // ← nuevo
   fallecido: { nombreCompleto: string; cedula?: string };
   tipoServicio: Servicio["tipoServicio"];
   tipoTraslado: Servicio["tipoTraslado"];
@@ -21,10 +22,17 @@ export interface RegistrarServicioInput {
 
 export async function registrarServicio(
   repo: ServiciosRepository,
-  bovedaRepo: BovedaRepository, // ← nuevo parámetro
+  bovedaRepo: BovedaRepository,
   input: RegistrarServicioInput,
   metadata: MetadataCambio
 ): Promise<Servicio> {
+  if (!input.fallecido.cedula) {
+    throw new Error("La cédula del fallecido es obligatoria.");
+  }
+  if (input.esAfiliado && !input.cedulaTitular) {
+    throw new Error("La cédula del titular del plan es obligatoria cuando el servicio es de un afiliado.");
+  }
+
   const valorTotal = input.itemsServicio.reduce((suma, item) => suma + item.valorTotal, 0);
 
   const servicio = await repo.crear({
@@ -32,6 +40,8 @@ export async function registrarServicio(
     sede: input.sede,
     convenioId: input.convenioId,
     afiliadoId: input.afiliadoId,
+    esAfiliado: input.esAfiliado, // ← nuevo
+    cedulaTitular: input.esAfiliado ? input.cedulaTitular : undefined, // ← nuevo
     fallecido: input.fallecido,
     tipoServicio: input.tipoServicio,
     tipoTraslado: input.tipoTraslado,

@@ -15,11 +15,11 @@ export const registrarPagoFn = onCall<RegistrarPagoInput>(async (request) => {
     throw new HttpsError("permission-denied", "No puedes registrar pagos de otra sede.");
   }
   const pago = await registrarPago(pagosRepo, afiliadosRepo, request.data, metadataHumano(uid));
-  return { pago };
+  return { pago: { ...pago, fecha: pago.fecha.toISOString() } };
 });
 
 export const listarPagosPorAfiliadoFn = onCall<{ afiliadoId: string }>(async (request) => {
   requireAuth(request);
   const pagos = await listarPagosPorAfiliado(pagosRepo, request.data.afiliadoId);
-  return { pagos };
+  return { pagos: pagos.map((p) => ({ ...p, fecha: p.fecha.toISOString() })) };
 });

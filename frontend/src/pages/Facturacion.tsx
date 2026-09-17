@@ -86,26 +86,47 @@ export default function Facturacion() {
           {
             encabezado: "Estado",
             render: (s: Servicio) => (
-              <span className={`rounded-full px-2.5 py-1 text-xs ${
-                s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
-                : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
-                : "bg-amber-50 text-amber-700"
-              }`}>
+              <span className={`rounded-full px-2.5 py-1 text-xs ${s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
+                  : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
+                    : "bg-amber-50 text-amber-700"
+                }`}>
                 {s.estadoFacturacion}
               </span>
             ),
           },
           {
-            encabezado: "Acción",
+            encabezado: "Factura",
             render: (s: Servicio) =>
-              s.estadoFacturacion === "pagado" ? (
+              s.facturaURL ? (
+                <a href={s.facturaURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver</a>
+              ) : (
+                <span className="text-xs text-tinta/40">—</span>
+              ),
+          },
+          {
+            encabezado: "Comprobante",
+            render: (s: Servicio) =>
+              s.comprobantePagoURL ? (
+                <a href={s.comprobantePagoURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver</a>
+              ) : (
+                <span className="text-xs text-tinta/40">—</span>
+              ),
+          },
+          {
+            encabezado: "Acción",
+            render: (s: Servicio) => {
+              if (rol !== "admin") {
+                return <span className="text-xs text-tinta/40">Solo lectura</span>;
+              }
+              return s.estadoFacturacion === "pagado" ? (
                 <span className="text-xs text-tinta/40">Completo</span>
               ) : (
                 <button onClick={() => setServicioActivo(s)} className="flex items-center gap-1 text-xs text-vino-700 hover:underline">
                   {s.estadoFacturacion === "pendiente por facturar" ? <FileText size={13} /> : <CircleDollarSign size={13} />}
                   {s.estadoFacturacion === "pendiente por facturar" ? "Marcar facturado" : "Marcar pagado"}
                 </button>
-              ),
+              );
+            },
           },
         ]}
         filas={filtrados}

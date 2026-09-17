@@ -8,7 +8,7 @@ import { useRol } from "../auth/RolContext";
 import type { Boveda, EstadoBoveda, Sede } from "../types";
 import { useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
-
+import CampoPrecio from "../components/CampoPrecio";
 const SEDES: Sede[] = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"];
 
 const PESTAÑAS: { valor: EstadoBoveda | "todas"; etiqueta: string }[] = [
@@ -68,7 +68,7 @@ export default function Bovedas() {
     try {
       await registrarBoveda({
         sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
-        servicioId: String(form.get("servicioId")),
+        servicioId: String(form.get("servicioId") || "") || undefined,
         zona: String(form.get("zona")),
         fechaInicio: String(form.get("fechaInicio")),
         valorArriendo: Number(form.get("valorArriendo")),
@@ -133,10 +133,10 @@ export default function Bovedas() {
             ) : (
               <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
             )}
-            <input name="servicioId" required placeholder="ID del servicio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="servicioId" placeholder="ID del servicio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <input name="zona" required placeholder="Zona (ej. Pailitas-Pelaya-Tamalameque)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <input name="fechaInicio" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="valorArriendo" type="number" required placeholder="Valor del arriendo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <CampoPrecio name="valorArriendo" required placeholder="Valor del arriendo" />
             <label className="flex items-center gap-2 text-sm text-tinta/70">
               <input type="checkbox" name="incluyeExhumacion" />
               Incluye exhumación
@@ -175,12 +175,15 @@ export default function Bovedas() {
           },
           {
             encabezado: "Servicio",
-            render: (b: Boveda) => (
-              <button onClick={() => copiarId(b.servicioId)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
-                {b.servicioId.slice(0, 8)}…
-                {idCopiado === b.servicioId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-              </button>
-            ),
+            render: (b: Boveda) =>
+              b.servicioId ? (
+                <button onClick={() => copiarId(b.servicioId!)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
+                  {b.servicioId.slice(0, 8)}…
+                  {idCopiado === b.servicioId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                </button>
+              ) : (
+                <span className="text-xs text-tinta/40">Sin servicio</span>
+              ),
           },
         ]}
         filas={filtradas}

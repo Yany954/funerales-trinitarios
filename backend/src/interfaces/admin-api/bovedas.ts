@@ -12,7 +12,7 @@ const repo = new BovedaRepositoryFirestore();
 /** El dashboard llama esto para crear una boveda nueva. */
 export const registrarBovedaFn = onCall<RegistrarBovedaInput>(async (request) => {
   const uid = requireAuth(request);
-  if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
+  if (request.auth?.token.rol !== "admin") {
     throw new HttpsError("permission-denied", "No puedes registrar bóvedas de otra sede.");
   }
   const boveda = await registrarBoveda(repo, request.data, metadataHumano(uid));

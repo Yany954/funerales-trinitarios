@@ -3,7 +3,7 @@ import { X, Receipt } from "lucide-react";
 import { listarPagosPorAfiliado, registrarPago } from "../api/client";
 import SubirFoto from "./SubirFoto";
 import type { Afiliado, Pago } from "../types";
-import { formatoPesos } from "../utils/formato";
+import { formatoPesos, formatoFecha } from "../utils/formato";
 
 interface Props {
   afiliado: Afiliado;
@@ -90,7 +90,7 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
             <ul className="divide-y divide-vino-50">
               {pagos.map((p) => (
                 <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>{new Date(p.fecha).toLocaleDateString("es-CO")} — {p.periodoCubierto} — {formatoPesos(p.valor)}</span>
+                  <span>{formatoFecha(p.fecha)} — {p.periodoCubierto} — {formatoPesos(p.valor)}</span>
                   <a href={p.comprobanteURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver comprobante</a>
                 </li>
               ))}

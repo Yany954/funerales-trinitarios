@@ -6,5 +6,7 @@ export interface ServiciosRepository {
   buscarPorConvenio(convenioId: string, desde: Date, hasta: Date): Promise<Servicio[]>;
   buscarPorSede(sede: string, desde: Date, hasta: Date): Promise<Servicio[]>;
   obtenerPorId(id: string): Promise<Servicio | null>;
-actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio>;
+  actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio>;
+  eliminar(id: string): Promise<void>;
+  buscarPorCedulaTitular(cedula: string): Promise<Servicio[]>;
 }
