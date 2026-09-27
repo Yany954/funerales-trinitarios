@@ -8,10 +8,7 @@ import { actualizarBeneficiarios, ActualizarBeneficiariosInput } from "../../app
 import { actualizarAfiliado, ActualizarAfiliadoInput } from "../../application/afiliados/actualizarAfiliados.usecase";
 import { eliminarAfiliado } from "../../application/afiliados/eliminarAfiliado.usecase";
 import { registrarFallecimientoBeneficiario, RegistrarFallecimientoBeneficiarioInput } from "../../application/afiliados/registrarFallecimientoBeneficiario.usecase";
-import { PlanesRepositoryFirestore } from "../../infrastructure/firebase/plan.repository.firestore";
-
 const repo = new AfiliadosRepositoryFirestore();
-const planesRepo = new PlanesRepositoryFirestore();
 function aFechaSerializable(valor: unknown): unknown {
   if (!valor) return valor;
   const conToDate = valor as { toDate?: () => Date };
@@ -25,7 +22,7 @@ export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes crear afiliados fuera de tu sede.");
   }
-  const afiliado = await crearAfiliado(repo, planesRepo, request.data, metadataHumano(uid));
+  const afiliado = await crearAfiliado(repo, request.data, metadataHumano(uid));
   return { afiliado };
 });
 
@@ -54,7 +51,7 @@ export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (reque
   if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
   }
-  const actualizado = await actualizarAfiliado(repo, planesRepo, request.data, metadataHumano(uid));
+  const actualizado = await actualizarAfiliado(repo, request.data, metadataHumano(uid));
   return { afiliado: actualizado };
 });
 

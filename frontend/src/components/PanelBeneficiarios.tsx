@@ -2,13 +2,20 @@ import { useState } from "react";
 import { X, Plus, Trash2, HeartCrack, Save } from "lucide-react";
 import { actualizarBeneficiarios, registrarFallecimientoBeneficiario } from "../api/client";
 import SubirDocumento from "./SubirDocumento";
-import { formatoFecha } from "../utils/formato";
+import { formatoFecha, calcularEdad } from "../utils/formato";
 import { contarBeneficiariosQueOcupanCupo, LIMITE_BENEFICIARIOS_POR_ANIO } from "../utils/cupoBeneficiarios";
 import type { Afiliado, Beneficiario } from "../types";
 
 interface Props {
   afiliado: Afiliado;
   onCerrar: () => void;
+}
+
+function aInputDate(valor: unknown): string {
+  if (!valor) return "";
+  const conToDate = valor as { toDate?: () => Date };
+  const fecha = conToDate?.toDate ? conToDate.toDate() : new Date(valor as string);
+  return isNaN(fecha.getTime()) ? "" : fecha.toISOString().slice(0, 10);
 }
 
 export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
@@ -24,7 +31,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
   const anioActual = new Date().getFullYear();
   const cupoUsado = contarBeneficiariosQueOcupanCupo(beneficiarios, anioActual);
 
-  function actualizarFila(i: number, campo: "nombre" | "parentesco" | "cedula", valor: string) {
+  function actualizarFila(i: number, campo: "nombre" | "parentesco" | "cedula" | "fechaNacimiento", valor: string) {
     setBeneficiarios((prev) => {
       const copia = [...prev];
       copia[i] = { ...copia[i], [campo]: valor };
@@ -38,7 +45,12 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
     try {
       const validos = beneficiarios
         .filter((b) => b.nombre.trim() && b.cedula.trim())
-        .map((b) => ({ nombre: b.nombre, parentesco: b.parentesco, cedula: b.cedula }));
+        .map((b) => ({
+          nombre: b.nombre,
+          parentesco: b.parentesco,
+          cedula: b.cedula,
+          fechaNacimiento: (b.fechaNacimiento as string) || undefined,
+        }));
       await actualizarBeneficiarios({ afiliadoId: afiliado.id, beneficiarios: validos });
       onCerrar();
     } catch (err) {
@@ -96,19 +108,28 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
 
           {beneficiarios.map((b, i) => (
             <div key={i} className={`rounded-lg border p-3 ${b.fallecido ? "border-red-100 bg-red-50/30" : "border-vino-100"}`}>
-              <div className="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2">
-                <input placeholder="Nombre" value={b.nombre} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
-                <input placeholder="Parentesco" value={b.parentesco} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
-                <input placeholder="Cédula" value={b.cedula} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+              {/* En celular se apila en una sola columna; desde sm hacia arriba, en fila */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem]">
+                <input placeholder="Nombre" value={b.nombre} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "nombre", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                <input placeholder="Parentesco" value={b.parentesco} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                <input placeholder="Cédula" value={b.cedula} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "cedula", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                <input
+                  type="date"
+                  value={aInputDate(b.fechaNacimiento)}
+                  disabled={b.fallecido}
+                  onChange={(e) => actualizarFila(i, "fechaNacimiento", e.target.value)}
+                  className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50"
+                />
                 {!b.fallecido && (
-                  <button onClick={() => setBeneficiarios((prev) => prev.filter((_, idx) => idx !== i))} className="text-tinta/40 hover:text-red-600">
-                    <Trash2 size={16} />
+                  <button onClick={() => setBeneficiarios((prev) => prev.filter((_, idx) => idx !== i))} className="flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:text-transparent">
+                    <Trash2 size={16} className="shrink-0" /> <span className="sm:hidden">Quitar beneficiario</span>
                   </button>
                 )}
               </div>
 
               <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-tinta/50">
                 {b.fechaAdicion ? <span>Alta: {formatoFecha(b.fechaAdicion)}</span> : null}
+                {b.fechaNacimiento ? <span>Edad: {calcularEdad(b.fechaNacimiento)} años</span> : null}
                 {b.fallecido ? (
                   <span className="flex items-center gap-1 text-red-700">
                     <HeartCrack size={12} /> Fallecido {formatoFecha(b.fechaFallecimiento)}
@@ -124,7 +145,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
               {marcandoFallecimiento === i && (
                 <div className="mt-2 space-y-2 rounded-lg bg-vino-50 p-3">
                   <p className="text-xs font-medium text-vino-900">Novedad de fallecimiento</p>
-                  <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                  <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
                   <SubirDocumento carpeta={`afiliados/${afiliado.sede}/${afiliado.id}`} documentos={certificadoURL} onCambiar={setCertificadoURL} />
                   <div className="flex gap-2">
                     <button
@@ -142,7 +163,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
           ))}
 
           {cupoUsado < LIMITE_BENEFICIARIOS_POR_ANIO ? (
-            <button onClick={() => setBeneficiarios((prev) => [...prev, { nombre: "", parentesco: "", cedula: "" }])} className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline">
+            <button onClick={() => setBeneficiarios((prev) => [...prev, { nombre: "", parentesco: "", cedula: "" } as Beneficiario])} className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline">
               <Plus size={14} /> Agregar beneficiario
             </button>
           ) : (

@@ -6,12 +6,11 @@ import { registrarServicio, RegistrarServicioInput } from "../../application/ser
 import { actualizarServicio, ActualizarServicioInput } from "../../application/servicios/actualizarServicio.usecase";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { cambiarEstadoFacturacion, CambiarEstadoFacturacionInput } from "../../application/servicios/cambiarEstadoFacturacion.usecase";
-import { ConveniosRepositoryFirestore } from "../../infrastructure/firebase/convenio.repository.firestore";
 import { eliminarServicio } from "../../application/servicios/eliminarServicio.usecase";
 import { listarServiciosPorCedulaTitular } from "../../application/servicios/listarServiciosPorCedulaTitular.usecase";
 import { actualizarTipoPago, ActualizarTipoPagoInput } from "../../application/servicios/actualizarTipodePago.usecase";
 
-const conveniosRepo = new ConveniosRepositoryFirestore();
+
 const repo = new ServiciosRepositoryFirestore();
 const bovedaRepo = new BovedaRepositoryFirestore();
 
@@ -46,7 +45,7 @@ export const cambiarEstadoFacturacionFn = onCall<CambiarEstadoFacturacionInput>(
     throw new HttpsError("permission-denied", "No puedes modificar servicios de otra sede.");
   }
   try {
-    const actualizado = await cambiarEstadoFacturacion(repo, conveniosRepo, request.data, metadataHumano(uid));
+    const actualizado = await cambiarEstadoFacturacion(repo, request.data, metadataHumano(uid));
     return { servicio: actualizado };
   } catch (err) {
     throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "No se pudo cambiar el estado.");

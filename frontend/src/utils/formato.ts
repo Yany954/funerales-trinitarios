@@ -15,3 +15,14 @@ export function formatoFecha(valor: unknown): string {
   if (isNaN(fecha.getTime())) return "Fecha no disponible";
   return fecha.toLocaleDateString("es-CO");
 }
+export function calcularEdad(fechaNacimiento: unknown): number | null {
+  if (!fechaNacimiento) return null;
+  const conToDate = fechaNacimiento as { toDate?: () => Date };
+  const fecha = conToDate?.toDate ? conToDate.toDate() : new Date(fechaNacimiento as string);
+  if (isNaN(fecha.getTime())) return null;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - fecha.getFullYear();
+  const diferenciaMeses = hoy.getMonth() - fecha.getMonth();
+  if (diferenciaMeses < 0 || (diferenciaMeses === 0 && hoy.getDate() < fecha.getDate())) edad--;
+  return edad;
+}

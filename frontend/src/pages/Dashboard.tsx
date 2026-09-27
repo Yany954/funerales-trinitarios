@@ -67,8 +67,8 @@ export default function Dashboard() {
           <p className="mt-1 font-display text-2xl text-vino-900">{serviciosMes === null ? "…" : serviciosMes}</p>
         </div>
 
-        <Link to="/servicios" className="group rounded-xl border border-vino-100 bg-white p-5 transition-colors hover:border-vino-400">
-          <p className="text-sm text-tinta/50">Pendiente por facturar</p>
+        <Link to="/facturacion?estado=pendiente por facturar" className="group rounded-xl border border-vino-100 bg-white p-5 transition-colors hover:border-vino-400">
+        <p className="text-sm text-tinta/50">Pendiente por facturar</p>
           <div className="mt-1 flex items-center justify-between">
             <p className="font-display text-2xl text-vino-900">{pendientesFacturar === null ? "…" : pendientesFacturar}</p>
             {!!pendientesFacturar && (

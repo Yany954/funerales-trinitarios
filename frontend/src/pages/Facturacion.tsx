@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Copy, Check, FileText, CircleDollarSign } from "lucide-react";
-import { db } from "../api/client";
+import { Copy, Check, FileText, CircleDollarSign, ArrowLeft } from "lucide-react";
+import { cambiarEstadoFacturacion, db } from "../api/client";
 import DataTable from "../components/DataTable";
 import PanelFacturacion from "../components/PanelFacturacion";
 import { formatoPesos, formatoFecha } from "../utils/formato";
 import { useRol } from "../auth/RolContext";
 import type { Servicio, Convenio, EstadoFacturacion } from "../types";
+import { confirmarEliminar } from "../utils/confirmar";
+import { useSearchParams } from "react-router-dom";
 
 export default function Facturacion() {
   const { sedeSeleccionada, sedeAsignada, rol, cargando: cargandoRol } = useRol();
@@ -17,8 +19,11 @@ export default function Facturacion() {
   const [cargando, setCargando] = useState(true);
   const [idCopiado, setIdCopiado] = useState<string | null>(null);
   const [filtroConvenio, setFiltroConvenio] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<EstadoFacturacion | "todos">("todos");
   const [servicioActivo, setServicioActivo] = useState<Servicio | null>(null);
+  const [searchParams] = useSearchParams();
+  
+  const estadoInicial = (searchParams.get("estado") as EstadoFacturacion | null) ?? "todos";
+  const [filtroEstado, setFiltroEstado] = useState<EstadoFacturacion | "todos">(estadoInicial);
 
   useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
 
@@ -49,7 +54,16 @@ export default function Facturacion() {
     if (filtroEstado !== "todos" && s.estadoFacturacion !== filtroEstado) return false;
     return true;
   });
-
+  async function manejarRetroceder(s: Servicio) {
+    const estadoAnterior = s.estadoFacturacion === "pagado" ? "facturado" : "pendiente por facturar";
+    const confirmado = await confirmarEliminar(`retroceder este servicio a "${estadoAnterior}"`);
+    if (!confirmado) return;
+    try {
+      await cambiarEstadoFacturacion({ servicioId: s.id, nuevoEstado: estadoAnterior });
+    } catch (err) {
+      console.error("Error al retroceder el estado:", err);
+    }
+  }
   return (
     <div className="space-y-6">
       <h2 className="font-display text-lg text-vino-900">Facturación de servicios</h2>
@@ -90,7 +104,7 @@ export default function Facturacion() {
                 : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
                   : "bg-amber-50 text-amber-700"
                 }`}>
-                {s.estadoFacturacion}
+                {s.estadoFacturacion === "facturado" ? "Pendiente de pago" : s.estadoFacturacion}
               </span>
             ),
           },
@@ -118,13 +132,22 @@ export default function Facturacion() {
               if (rol !== "admin") {
                 return <span className="text-xs text-tinta/40">Solo lectura</span>;
               }
-              return s.estadoFacturacion === "pagado" ? (
-                <span className="text-xs text-tinta/40">Completo</span>
-              ) : (
-                <button onClick={() => setServicioActivo(s)} className="flex items-center gap-1 text-xs text-vino-700 hover:underline">
-                  {s.estadoFacturacion === "pendiente por facturar" ? <FileText size={13} /> : <CircleDollarSign size={13} />}
-                  {s.estadoFacturacion === "pendiente por facturar" ? "Marcar facturado" : "Marcar pagado"}
-                </button>
+              return (
+                <div className="flex items-center gap-2">
+                  {s.estadoFacturacion !== "pendiente por facturar" && (
+                    <button onClick={() => manejarRetroceder(s)} title="Retroceder estado" className="rounded-lg p-1.5 text-tinta/50 hover:bg-vino-50 hover:text-vino-700">
+                      <ArrowLeft size={16} />
+                    </button>
+                  )}
+                  {s.estadoFacturacion === "pagado" ? (
+                    <span className="text-xs text-tinta/40">Completo</span>
+                  ) : (
+                    <button onClick={() => setServicioActivo(s)} className="flex items-center gap-1 text-xs text-vino-700 hover:underline">
+                      {s.estadoFacturacion === "pendiente por facturar" ? <FileText size={13} /> : <CircleDollarSign size={13} />}
+                      {s.estadoFacturacion === "pendiente por facturar" ? "Marcar facturado" : "Marcar pagado"}
+                    </button>
+                  )}
+                </div>
               );
             },
           },

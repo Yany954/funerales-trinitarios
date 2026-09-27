@@ -5,7 +5,6 @@ import { db, actualizarInventario } from "../api/client";
 import DataTable from "../components/DataTable";
 import { useRol } from "../auth/RolContext";
 import type { InventarioCofre, TipoCofre } from "../types";
-import CampoPrecio from "../components/CampoPrecio";
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
 interface FilaInventarioAgrupada {

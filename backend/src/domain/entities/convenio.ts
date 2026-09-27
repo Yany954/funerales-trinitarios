@@ -12,14 +12,15 @@ export interface Convenio {
 }
 
 export interface TarifaConvenio {
-  /** ID del documento = el año, ej. "2026" */
   anio: string;
-  servicioCompletoBasico: number;
+  servicioCompletoBasico?: number;
   servicioCompletoSemilujo?: number;
   servicioCompletoLujo?: number;
-  iniciales: number;
-  finales: number;
-  trasladoLocal: number;
-  trasladoFluvial: number;
+  iniciales?: number;
+  finales?: number;
+  trasladoLocal?: number;
+  trasladoFluvial?: number;
+  precioCofre?: number;
+  precioBoveda?: number;
   metadata: MetadataCambio;
 }

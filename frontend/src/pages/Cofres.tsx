@@ -98,8 +98,8 @@ export default function Cofres() {
       encabezado: "Acciones",
       render: (c: TipoCofre) => (
         <div className="flex gap-2">
-          <button onClick={() => abrirParaEditar(c)} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
-          <button onClick={() => manejarEliminar(c)} className="text-red-600 hover:underline"><Trash2 size={14} /></button>
+          <button onClick={() => abrirParaEditar(c)} className="text-vino-700 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Pencil size={18} /></button>
+          <button onClick={() => manejarEliminar(c)} className="text-red-600 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Trash2 size={18} /></button>
         </div>
       ),
     },

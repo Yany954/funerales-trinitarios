@@ -2,7 +2,7 @@ import { db, Timestamp } from "./admin";
 import { Afiliado, PersonaCubierta } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
-  import { Beneficiario } from "../../domain/entities/afiliado";
+import { Beneficiario } from "../../domain/entities/afiliado";
 
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
@@ -12,6 +12,13 @@ function aFirestore(afiliado: Omit<Afiliado, "id">) {
   return {
     ...afiliado,
     fechaAfiliacion: Timestamp.fromDate(afiliado.fechaAfiliacion),
+    fechaAfiliacionReal: Timestamp.fromDate(afiliado.fechaAfiliacionReal),
+    fechaNacimiento: Timestamp.fromDate(afiliado.fechaNacimiento),
+    beneficiarios: afiliado.beneficiarios.map((b) => ({
+      ...b,
+      fechaNacimiento: b.fechaNacimiento ? Timestamp.fromDate(b.fechaNacimiento) : undefined, // ← nuevo
+      fechaAdicion: Timestamp.fromDate(b.fechaAdicion),
+    })),
     ultimoPago: afiliado.ultimoPago
       ? { ...afiliado.ultimoPago, fecha: Timestamp.fromDate(afiliado.ultimoPago.fecha) }
       : null,
@@ -24,8 +31,10 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
     id,
     ...data,
     fechaAfiliacion: data.fechaAfiliacion.toDate(),
+    fechaAfiliacionReal: data.fechaAfiliacionReal?.toDate ? data.fechaAfiliacionReal.toDate() : data.fechaAfiliacionReal,
     ultimoPago: data.ultimoPago ? { ...data.ultimoPago, fecha: data.ultimoPago.fecha.toDate() } : null,
-    beneficiarios: (data.beneficiarios ?? []).map(convertirBeneficiario), // ← nuevo
+    beneficiarios: (data.beneficiarios ?? []).map(convertirBeneficiario),
+    fechaNacimiento: data.fechaNacimiento?.toDate ? data.fechaNacimiento.toDate() : data.fechaNacimiento,
     metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
   } as Afiliado;
 }
@@ -33,6 +42,7 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
 function convertirBeneficiario(b: any): Beneficiario {
   return {
     ...b,
+    fechaNacimiento: b.fechaNacimiento?.toDate ? b.fechaNacimiento.toDate() : b.fechaNacimiento, // ← nuevo
     fechaAdicion: b.fechaAdicion?.toDate ? b.fechaAdicion.toDate() : b.fechaAdicion,
     fechaFallecimiento: b.fechaFallecimiento?.toDate ? b.fechaFallecimiento.toDate() : b.fechaFallecimiento,
   };
@@ -137,7 +147,9 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     const datos: any = { ...cambios };
     if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };
     if (cambios.fechaAfiliacion) datos.fechaAfiliacion = Timestamp.fromDate(cambios.fechaAfiliacion);
+    if (cambios.fechaAfiliacionReal) datos.fechaAfiliacionReal = Timestamp.fromDate(cambios.fechaAfiliacionReal);
     if (cambios.ultimoPago) datos.ultimoPago = { ...cambios.ultimoPago, fecha: Timestamp.fromDate(cambios.ultimoPago.fecha) };
+    if (cambios.fechaNacimiento) datos.fechaNacimiento = Timestamp.fromDate(cambios.fechaNacimiento);
     await db.collection(AFILIADOS).doc(id).update(datos);
     const doc = await db.collection(AFILIADOS).doc(id).get();
     return deFirestore(doc.id, doc.data()!);

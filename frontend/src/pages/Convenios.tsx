@@ -18,6 +18,8 @@ const METRICAS: { valor: keyof TarifaConvenio; etiqueta: string }[] = [
   { valor: "finales", etiqueta: "Finales" },
   { valor: "trasladoLocal", etiqueta: "Traslado local" },
   { valor: "trasladoFluvial", etiqueta: "Traslado fluvial" },
+  { valor: "precioCofre", etiqueta: "Precio cofre" },
+  { valor: "precioBoveda", etiqueta: "Precio bóveda" },
 ];
 
 const COLORES_POR_ANIO: Record<string, string> = { "2025": "#B14E72", "2026": "#5E2138" };
@@ -95,18 +97,20 @@ export default function Convenios() {
     setError(null);
     setGuardandoTarifa(true);
     const form = new FormData(e.currentTarget);
-    const numero = (campo: string) => Number(form.get(campo) || 0);
+    const numero = (campo: string) => (form.get(campo) ? Number(form.get(campo)) : undefined);
     try {
       await guardarTarifa({
         convenioId: convenioIdTarifa,
         anio: anioTarifa,
         servicioCompletoBasico: numero("servicioCompletoBasico"),
-        servicioCompletoSemilujo: form.get("servicioCompletoSemilujo") ? numero("servicioCompletoSemilujo") : undefined,
-        servicioCompletoLujo: form.get("servicioCompletoLujo") ? numero("servicioCompletoLujo") : undefined,
+        servicioCompletoSemilujo: numero("servicioCompletoSemilujo"),
+        servicioCompletoLujo: numero("servicioCompletoLujo"),
         iniciales: numero("iniciales"),
         finales: numero("finales"),
         trasladoLocal: numero("trasladoLocal"),
         trasladoFluvial: numero("trasladoFluvial"),
+        precioCofre: numero("precioCofre"),
+        precioBoveda: numero("precioBoveda"),
       });
       nuevaTarifaEnBlanco();
       (e.target as HTMLFormElement).reset();
@@ -232,13 +236,15 @@ export default function Convenios() {
           </select>
           <input value={anioTarifa} onChange={(e) => setAnioTarifa(e.target.value)} required placeholder="Año (ej. 2026)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
           <div />
-          <CampoPrecio name="servicioCompletoBasico" placeholder="Servicio completo básico" valorInicial={valoresForm.servicioCompletoBasico} required />
+          <CampoPrecio name="servicioCompletoBasico" placeholder="Servicio completo básico" valorInicial={valoresForm.servicioCompletoBasico} />
           <CampoPrecio name="servicioCompletoSemilujo" placeholder="Semilujo (opcional)" valorInicial={valoresForm.servicioCompletoSemilujo} />
           <CampoPrecio name="servicioCompletoLujo" placeholder="Lujo (opcional)" valorInicial={valoresForm.servicioCompletoLujo} />
-          <CampoPrecio name="iniciales" placeholder="Iniciales" valorInicial={valoresForm.iniciales} required />
-          <CampoPrecio name="finales" placeholder="Finales" valorInicial={valoresForm.finales} required />
-          <CampoPrecio name="trasladoLocal" placeholder="Traslado local" valorInicial={valoresForm.trasladoLocal} required />
-          <CampoPrecio name="trasladoFluvial" placeholder="Traslado fluvial" valorInicial={valoresForm.trasladoFluvial} required />
+          <CampoPrecio name="iniciales" placeholder="Iniciales" valorInicial={valoresForm.iniciales} />
+          <CampoPrecio name="finales" placeholder="Finales" valorInicial={valoresForm.finales} />
+          <CampoPrecio name="trasladoLocal" placeholder="Traslado local" valorInicial={valoresForm.trasladoLocal} />
+          <CampoPrecio name="trasladoFluvial" placeholder="Traslado fluvial" valorInicial={valoresForm.trasladoFluvial} />
+          <CampoPrecio name="precioCofre" placeholder="Precio cofre" valorInicial={valoresForm.precioCofre} />
+          <CampoPrecio name="precioBoveda" placeholder="Precio bóveda" valorInicial={valoresForm.precioBoveda} />
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <button type="submit" disabled={guardandoTarifa} className="flex items-center justify-center gap-2 rounded-lg bg-buganvilla px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 sm:col-span-2">
             <Handshake size={16} />

@@ -1,11 +1,7 @@
 import { MetadataCambio } from "../value-objects/metadata-cambio";
 import { Sede } from "../value-objects/rol-usuario";
 
-export interface Beneficiario {
-  nombre: string;
-  parentesco: string;
-  cedula: string;
-}
+
 
 export interface UltimoPago {
   fecha: Date;
@@ -17,19 +13,20 @@ export interface Afiliado {
   id: string;
   nombreCompleto: string;
   cedula: string;
-  /** Referencia a planes_funerarios/{id} — Girasol, Alianza, Bendiciones, Integral */
+  numeroContrato: string;
+  sede: Sede;
+  vereda?: string;
   planId: string;
+  fechaAfiliacionReal: Date;
+  valorCuotaMensual: number;
+  fechaNacimiento: Date;
   estadoPlan: "activo" | "inactivo" | "en mora";
   fechaAfiliacion: Date;
-  sede: Sede;
   beneficiarios: Beneficiario[];
   ultimoPago: UltimoPago | null;
   tieneSeguroVida: boolean;
   aseguradora?: string;
   observaciones?: string;
-  numeroContrato: string;
-  anioAfiliacion: number;
-  valorCuotaMensual: number;
   metadata: MetadataCambio;
 }
 
@@ -37,7 +34,6 @@ export interface Afiliado {
 export interface PersonaCubierta {
   id: string;
   nombreCompleto: string;
-  /** nombreCompleto en minúsculas, para poder buscar sin importar mayúsculas/acentos de tipeo. */
   nombreBusqueda: string;
   cedula: string;
   esTitular: boolean;
@@ -48,6 +44,7 @@ export interface BeneficiarioEntrada {
   nombre: string;
   parentesco: string;
   cedula: string;
+  fechaNacimiento?: string; 
 }
 export interface Beneficiario {
   nombre: string;
@@ -56,5 +53,6 @@ export interface Beneficiario {
   fechaAdicion: Date;
   fallecido?: boolean;
   fechaFallecimiento?: Date;
+  fechaNacimiento?: Date;
   certificadoDefuncionURL?: string;
 }

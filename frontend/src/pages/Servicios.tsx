@@ -105,15 +105,17 @@ export default function Servicios() {
     setItems((prev) => [...prev, { concepto: `Flores: ${flor.nombre}`, cantidad: 1, valorUnitario: flor.precioPublico, valorTotal: flor.precioPublico }]);
   }
 
-  const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
-    { campo: "servicioCompletoBasico", etiqueta: "Servicio completo básico" },
-    { campo: "servicioCompletoSemilujo", etiqueta: "Servicio completo semilujo" },
-    { campo: "servicioCompletoLujo", etiqueta: "Servicio completo lujo" },
-    { campo: "iniciales", etiqueta: "Iniciales" },
-    { campo: "finales", etiqueta: "Finales" },
-    { campo: "trasladoLocal", etiqueta: "Traslado local" },
-    { campo: "trasladoFluvial", etiqueta: "Traslado fluvial" },
-  ];
+const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
+  { campo: "servicioCompletoBasico", etiqueta: "Servicio completo básico" },
+  { campo: "servicioCompletoSemilujo", etiqueta: "Servicio completo semilujo" },
+  { campo: "servicioCompletoLujo", etiqueta: "Servicio completo lujo" },
+  { campo: "iniciales", etiqueta: "Iniciales" },
+  { campo: "finales", etiqueta: "Finales" },
+  { campo: "trasladoLocal", etiqueta: "Traslado local" },
+  { campo: "trasladoFluvial", etiqueta: "Traslado fluvial" },
+  { campo: "precioCofre", etiqueta: "Cofre (del convenio)" },
+  { campo: "precioBoveda", etiqueta: "Bóveda (del convenio)" },
+];
 
   function agregarDesdeTarifa(campo: keyof TarifaConvenio) {
     if (!tarifaConvenio) return;
@@ -321,12 +323,12 @@ export default function Servicios() {
               El precio de cofres/flores/tarifa se llena solo — edita "Valor unit." abajo si necesitas un valor distinto. La bóveda se agrega aparte, arriba.
             </p>
             {items.map((item, i) => (
-              <div key={i} className="grid grid-cols-[1fr_5rem_7rem_2rem] gap-2">
-                <input placeholder="Concepto" value={item.concepto} onChange={(e) => actualizarItem(i, "concepto", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <input type="number" min={1} placeholder="Cant." value={item.cantidad} onChange={(e) => actualizarItem(i, "cantidad", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <input type="number" min={0} placeholder="Valor unit." value={item.valorUnitario || ""} onChange={(e) => actualizarItem(i, "valorUnitario", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))} className="text-tinta/40 hover:text-red-600">
-                  <Trash2 size={16} />
+              <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-vino-50 p-2 sm:flex sm:items-center sm:border-0 sm:p-0">
+                <input placeholder="Concepto" value={item.concepto} onChange={(e) => actualizarItem(i, "concepto", e.target.value)} className="col-span-2 w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:col-span-1 sm:w-auto sm:flex-[2]" />
+                <input type="number" min={1} placeholder="Cant." value={item.cantidad} onChange={(e) => actualizarItem(i, "cantidad", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-20" />
+                <input type="number" min={0} placeholder="Valor unit." value={item.valorUnitario || ""} onChange={(e) => actualizarItem(i, "valorUnitario", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-28" />
+                <button type="button" onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1 sm:w-8 sm:py-0 sm:text-transparent">
+                  <Trash2 size={16} className="shrink-0" /> <span className="sm:hidden">Quitar</span>
                 </button>
               </div>
             ))}
@@ -379,11 +381,10 @@ export default function Servicios() {
           {
             encabezado: "Facturación",
             render: (s: Servicio) => (
-              <Link to="/facturacion" className={`rounded-full px-2.5 py-1 text-xs hover:underline ${
-                s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
-                : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
-                : "bg-amber-50 text-amber-700"
-              }`}>
+              <Link to="/facturacion" className={`rounded-full px-2.5 py-1 text-xs hover:underline ${s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
+                  : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
+                    : "bg-amber-50 text-amber-700"
+                }`}>
                 {s.estadoFacturacion}
               </Link>
             ),

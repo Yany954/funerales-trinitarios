@@ -1,14 +1,99 @@
 // Espejo (simplificado) de backend/src/domain/entities — mantener sincronizado
 // a mano por ahora; si el proyecto crece, mover a un paquete compartido.
 
+// ============================================================
+// Sedes / navegación
+// ============================================================
+
+export type Sede = "Pailitas" | "Tamalameque" | "Pelaya" | "Curumaní";
+
+export const VEREDAS_POR_MUNICIPIO: Record<string, string[]> = {
+  Pailitas: ["Las Vegas", "Palestina", "Floresta"],
+  Curumaní: ["Sabana Grande", "San Roque"],
+  Pelaya: ["Floresta", "Costilla", "San Bernardo"],
+  Tamalameque: ["Antequera", "Brisas", "Pasacorriendo"],
+};
+
+export interface NavItem {
+  label: string;
+  path: string;
+  icon: string; // nombre del ícono de lucide-react
+}
+
+// ============================================================
+// Afiliados y beneficiarios
+// ============================================================
+
+/** Beneficiario tal como se LEE de un afiliado (incluye historial). */
 export interface Beneficiario {
   nombre: string;
   parentesco: string;
   cedula: string;
+  fechaNacimiento?: unknown; // Timestamp de Firestore o string ISO, según de dónde llegue
   fechaAdicion?: unknown;
   fallecido?: boolean;
   fechaFallecimiento?: unknown;
   certificadoDefuncionURL?: string;
+}
+
+/** Beneficiario tal como se ENVÍA desde un formulario — sin campos que solo maneja el backend. */
+export interface BeneficiarioEntrada {
+  nombre: string;
+  parentesco: string;
+  cedula: string;
+  fechaNacimiento?: string; // "yyyy-mm-dd"
+}
+
+export interface Afiliado {
+  id: string;
+  nombreCompleto: string;
+  cedula: string;
+  numeroContrato: string;
+  sede: Sede;
+  vereda?: string;
+  planId: string;
+  fechaNacimiento?: unknown;
+  fechaAfiliacionReal: unknown;
+  valorCuotaMensual: number;
+  estadoPlan: "activo" | "inactivo" | "en mora";
+  beneficiarios: Beneficiario[];
+  tieneSeguroVida: boolean;
+}
+
+export interface CrearAfiliadoInput {
+  nombreCompleto: string;
+  cedula: string;
+  numeroContrato: string;
+  sede: Sede;
+  vereda?: string;
+  planId: string;
+  fechaNacimiento: string;
+  fechaAfiliacionReal: string;
+  valorCuotaMensual: number;
+  beneficiarios: BeneficiarioEntrada[];
+  tieneSeguroVida: boolean;
+  aseguradora?: string;
+  observaciones?: string;
+}
+
+export interface ActualizarAfiliadoInput {
+  id: string;
+  nombreCompleto?: string;
+  cedula?: string;
+  numeroContrato?: string;
+  planId?: string;
+  fechaNacimiento?: string;
+  fechaAfiliacionReal?: string;
+  valorCuotaMensual?: number;
+  tieneSeguroVida?: boolean;
+  aseguradora?: string;
+  observaciones?: string;
+  vereda?: string;
+}
+
+export interface ActualizarBeneficiariosInput {
+  afiliadoId: string;
+  beneficiarios: BeneficiarioEntrada[];
 }
 
 export interface RegistrarFallecimientoBeneficiarioInput {
@@ -17,53 +102,6 @@ export interface RegistrarFallecimientoBeneficiarioInput {
   fechaFallecimiento: string;
   certificadoDefuncionURL: string;
 }
-
-export interface Afiliado {
-  id: string;
-  nombreCompleto: string;
-  cedula: string;
-  numeroContrato: string;
-  planId: string;
-  estadoPlan: "activo" | "inactivo" | "en mora";
-  beneficiarios: Beneficiario[];
-  tieneSeguroVida: boolean;
-  sede: Sede;
-  anioAfiliacion: number;
-  valorCuotaMensual: number;
-}
-export interface ActualizarAfiliadoInput { 
-  id: string; 
-  nombreCompleto?: string; 
-  cedula?: string; 
-  numeroContrato?: string; 
-  planId?: string; 
-  tieneSeguroVida?: boolean; 
-  aseguradora?: string; 
-  observaciones?: string; 
-  anioAfiliacion: number;
-  valorCuotaMensual: number; }
-
-export interface ResultadoBusquedaAfiliado {
-  persona: PersonaCubierta;
-  afiliado: Afiliado;
-}
-
-export interface CrearAfiliadoInput {
-  nombreCompleto: string;
-  cedula: string;
-  numeroContrato: string;
-  sede: Sede;
-  planId: string;
-  beneficiarios: Beneficiario[];
-  tieneSeguroVida: boolean;
-  aseguradora?: string;
-  observaciones?: string;
-  anioAfiliacion: number;
-}
-export interface ActualizarBeneficiariosInput { 
-  afiliadoId: string; 
-  beneficiarios: Beneficiario[];
- }
 
 export interface PersonaCubierta {
   id: string;
@@ -74,106 +112,47 @@ export interface PersonaCubierta {
   afiliadoId: string;
 }
 
-export type Sede = "Pailitas" | "Tamalameque" | "Pelaya" | "Curumaní";
-
-export interface NavItem {
-  label: string;
-  path: string;
-  icon: string; // nombre del ícono de lucide-react
+export interface ResultadoBusquedaAfiliado {
+  persona: PersonaCubierta;
+  afiliado: Afiliado;
 }
 
-export type EstadoBoveda = "vigente" | "por vencer" | "vencida";
+// ============================================================
+// Planes funerarios
+// ============================================================
 
-export interface Boveda {
+export interface PlanFunerario {
   id: string;
-  servicioId?: string;
-  zona: string;
-  fechaInicio: string;   // yyyy-mm-dd
-  fechaLimite: string;   // yyyy-mm-dd, calculada por el backend
-  valorArriendo: number;
-  incluyeExhumacion: boolean;
-  estado: EstadoBoveda;
-  sede: Sede;
+  nombre: string;
+  valorMensual: number;
 }
 
-export interface RegistrarBovedaInput {
-  servicioId?: string;
-  zona?: string;
-  fechaInicio: string;
-  valorArriendo?: number;
-  incluyeExhumacion: boolean;
-  sede: Sede;
-  itemBovedaId?: string;
-}
-export interface ItemBoveda { id: string; nombre: string; zona: string; precio: number; }
-export interface CrearItemBovedaInput { nombre: string; zona: string; precio: number; }
-export interface ActualizarItemBovedaInput { id: string; nombre?: string; zona?: string; precio?: number; }
-
-export const VEREDAS_POR_MUNICIPIO: Record<string, string[]> = {
-  Pailitas: ["Casco urbano", "Chiriguaná Viejo", "La Aurora", "San Roque"],
-  Curumaní: ["Casco urbano", "Rincón Hondo", "Poponte", "Saloa"],
-  Chiriguaná: ["Casco urbano", "La Sierra", "Estación Sur"],
-  Pelaya: ["Casco urbano", "La Gloria", "Palmira"],
-  Tamalameque: ["Casco urbano", "Saloa", "Mata de Palma"],
-};
-export interface ItemServicio {
-  concepto: string;
-  cantidad: number;
-  valorUnitario: number;
-  valorTotal: number;
+export interface CrearPlanInput {
+  nombre: string;
+  valorMensual: number;
 }
 
-export type TipoServicio = "traslado" | "servicio completo" | "traslado + servicio completo";
-export type TipoTraslado = "local" | "fluvial" | "ninguno";
-export type EstadoFacturacion = "pendiente por facturar" | "facturado" | "pagado";
-
-export interface Servicio {
+export interface ActualizarPlanInput {
   id: string;
-  fechaServicio: string; // Timestamp serializado -> string al leer de Firestore en el frontend
-  sede: Sede;
-  convenioId: string;
-  afiliadoId?: string;
-  fallecido: { nombreCompleto: string; cedula?: string };
-  tipoServicio: TipoServicio;
-  tipoTraslado: TipoTraslado;
-  usoBoveda: { usada: boolean };
-  tuvoMisaOCulto: "misa" | "culto" | "ninguno";
-  itemsServicio: ItemServicio[];
-  valorTotal: number;
-  estadoFacturacion: EstadoFacturacion;
-  documentosAdjuntos: string[];
-  facturaURL?: string;
-  comprobantePagoURL?: string;
-  esAfiliado: boolean;
-  cedulaTitular?: string;
-  tipoPago?: TipoPago;
+  nombre?: string;
 }
-export interface ServicioResumen {
-  id: string;
-  fechaServicio: string;
-  sede: string;
-  tipoServicio: string;
-  valorTotal: number;
-  estadoFacturacion: string;
-  facturaURL?: string;
-  comprobantePagoURL?: string;
+
+export interface HistorialPrecioPlan {
+  planId: string;
+  anio: string;
+  valorMensual: number;
 }
-export interface RegistrarServicioInput {
-  fechaServicio: string;
-  sede: Sede;
-  convenioId: string;
-  afiliadoId?: string;
-  fallecido: { nombreCompleto: string; cedula?: string };
-  tipoServicio: TipoServicio;
-  tipoTraslado: TipoTraslado;
-  usaBoveda: boolean;
-  tuvoMisaOCulto: "misa" | "culto" | "ninguno";
-  itemsServicio: ItemServicio[];
-  observaciones?: string;
-  esAfiliado: boolean;
-  cedulaTitular?: string;
-  valorBoveda?: number;
+
+export interface GuardarPrecioAnioInput {
+  planId: string;
+  anio: string;
+  valorMensual: number;
 }
+
+// ============================================================
+// Convenios y tarifas
+// ============================================================
+
 export type TipoConvenio = "empresa_exequial" | "alcaldia" | "interno";
 
 export interface Convenio {
@@ -184,18 +163,6 @@ export interface Convenio {
   coberturaGeografica: string[];
 }
 
-export interface TarifaConvenio {
-  anio: string;
-  servicioCompletoBasico: number;
-  servicioCompletoSemilujo?: number;
-  servicioCompletoLujo?: number;
-  iniciales: number;
-  finales: number;
-  trasladoLocal: number;
-  trasladoFluvial: number;
-}
-export interface DuplicarTarifaInput { convenioId: string; anioOrigen: string; anioDestino: string; }
-
 export interface CrearConvenioInput {
   nombre: string;
   tipo: TipoConvenio;
@@ -203,10 +170,40 @@ export interface CrearConvenioInput {
   coberturaGeografica: string[];
 }
 
+export interface ActualizarConvenioInput {
+  id: string;
+  nombre?: string;
+  tipo?: TipoConvenio;
+  numeroContrato?: string;
+  coberturaGeografica?: string[];
+}
+
+export interface TarifaConvenio {
+  anio: string;
+  servicioCompletoBasico?: number;
+  servicioCompletoSemilujo?: number;
+  servicioCompletoLujo?: number;
+  iniciales?: number;
+  finales?: number;
+  trasladoLocal?: number;
+  trasladoFluvial?: number;
+  precioCofre?: number;
+  precioBoveda?: number;
+}
+
 export interface GuardarTarifaInput extends TarifaConvenio {
   convenioId: string;
 }
-export interface ActualizarConvenioInput { id: string; nombre?: string; tipo?: TipoConvenio; numeroContrato?: string; coberturaGeografica?: string[]; }
+
+export interface DuplicarTarifaInput {
+  convenioId: string;
+  anioOrigen: string;
+  anioDestino: string;
+}
+
+// ============================================================
+// Cofres
+// ============================================================
 
 export type NivelCofre = "basico" | "semilujo" | "lujo";
 export type CategoriaCofre = "estandar" | "ancho" | "infantil";
@@ -221,53 +218,225 @@ export interface TipoCofre {
   fotoURL?: string;
   descripcion?: string;
 }
-export interface CrearTipoCofreInput { categoria: CategoriaCofre; nivel?: NivelCofre; tamanoCm?: number; referencia: string; precio: number; fotoURL?: string; descripcion?: string; }
-export interface ActualizarTipoCofreInput { id: string; categoria?: CategoriaCofre; nivel?: NivelCofre; tamanoCm?: number; referencia?: string; precio?: number; fotoURL?: string; descripcion?: string; }
 
-export interface PlanFunerario { id: string; nombre: string; valorMensual: number; }
-export interface CrearPlanInput { nombre: string; valorMensual: number; }
-export interface ActualizarPlanInput { id: string; nombre?: string; }
-export interface GuardarPrecioAnioInput { planId: string; anio: string; valorMensual: number; }
-export interface HistorialPrecioPlan { anio: string; valorMensual: number; planId: string; }
-
-export interface Flor { id: string; nombre: string; fotoURL?: string; precioCosto: number; precioPublico: number; }
-export interface CrearFlorInput { nombre: string; precioCosto: number; precioPublico: number; fotoURL?: string; }
-
-export interface InventarioCofre { id: string; sede: string; tipoCofreId: string; cantidadDisponible: number; }
-export interface ActualizarInventarioInput { sede: string; tipoCofreId: string; cantidadDisponible: number; }
-
-export type TipoFiltroReporte = "alcaldia" | "convenio" | "sede";
-
-export interface FilaReporte {
-  fecha: string;
-  fallecido: string;
-  valor: number;
-  descripcion: string;
-  usoBoveda: boolean;
+export interface CrearTipoCofreInput {
+  categoria: CategoriaCofre;
+  nivel?: NivelCofre;
+  tamanoCm?: number;
+  referencia: string;
+  precio: number;
+  fotoURL?: string;
+  descripcion?: string;
 }
 
-export interface GenerarReporteInput {
-  filtroTipo: TipoFiltroReporte;
-  filtroValor: string;
+export interface ActualizarTipoCofreInput {
+  id: string;
+  categoria?: CategoriaCofre;
+  nivel?: NivelCofre;
+  tamanoCm?: number;
+  referencia?: string;
+  precio?: number;
+  fotoURL?: string;
+  descripcion?: string;
+}
+
+// ============================================================
+// Flores
+// ============================================================
+
+export interface Flor {
+  id: string;
+  nombre: string;
+  fotoURL?: string;
+  precioCosto: number;
+  precioPublico: number;
+}
+
+export interface CrearFlorInput {
+  nombre: string;
+  precioCosto: number;
+  precioPublico: number;
+  fotoURL?: string;
+}
+
+export interface ActualizarFlorInput {
+  id: string;
+  nombre?: string;
+  precioCosto?: number;
+  precioPublico?: number;
+  fotoURL?: string;
+}
+
+// ============================================================
+// Inventario
+// ============================================================
+
+export interface InventarioCofre {
+  id: string;
+  sede: string;
+  tipoCofreId: string;
+  cantidadDisponible: number;
+}
+
+export interface ActualizarInventarioInput {
+  sede: string;
+  tipoCofreId: string;
+  cantidadDisponible: number;
+}
+
+// ============================================================
+// Bóvedas
+// ============================================================
+
+export type EstadoBoveda = "vigente" | "por vencer" | "vencida";
+
+export interface Boveda {
+  id: string;
+  sede: Sede;
+  servicioId?: string;
+  zona: string;
+  fechaInicio: string; // yyyy-mm-dd
+  fechaLimite: string; // yyyy-mm-dd, calculada por el backend
+  valorArriendo: number;
+  incluyeExhumacion: boolean;
+  estado: EstadoBoveda;
+}
+
+export interface RegistrarBovedaInput {
+  sede: Sede;
+  servicioId?: string;
+  zona?: string;
+  itemBovedaId?: string;
+  valorArriendo?: number;
   fechaInicio: string;
-  fechaFin: string;
+  incluyeExhumacion: boolean;
 }
+
+/** Catálogo de precios para bóvedas alquiladas SIN servicio asociado. */
+export interface ItemBoveda {
+  id: string;
+  nombre: string;
+  zona: string;
+  precio: number;
+}
+
+export interface CrearItemBovedaInput {
+  nombre: string;
+  zona: string;
+  precio: number;
+}
+
+export interface ActualizarItemBovedaInput {
+  id: string;
+  nombre?: string;
+  zona?: string;
+  precio?: number;
+}
+
+// ============================================================
+// Servicios
+// ============================================================
+
+export type TipoServicio = "traslado" | "servicio completo" | "traslado + servicio completo";
+export type TipoTraslado = "local" | "fluvial" | "ninguno";
+export type EstadoFacturacion = "pendiente por facturar" | "facturado" | "pagado";
+export type TipoPago = "pendiente" | "convenio_alcaldia" | "afiliado";
+
+export interface ItemServicio {
+  concepto: string;
+  cantidad: number;
+  valorUnitario: number;
+  valorTotal: number;
+}
+
+export interface Servicio {
+  id: string;
+  fechaServicio: string; // Timestamp serializado -> string al leer de Firestore en el frontend
+  sede: Sede;
+  convenioId: string;
+  afiliadoId?: string;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
+  fallecido: { nombreCompleto: string; cedula?: string };
+  tipoServicio: TipoServicio;
+  tipoTraslado: TipoTraslado;
+  usoBoveda: { usada: boolean };
+  tuvoMisaOCulto: "misa" | "culto" | "ninguno";
+  itemsServicio: ItemServicio[];
+  valorTotal: number;
+  estadoFacturacion: EstadoFacturacion;
+  tipoPago?: TipoPago;
+  documentosAdjuntos: string[];
+  facturaURL?: string;
+  comprobantePagoURL?: string;
+}
+
+/** Versión liviana de Servicio, usada en el historial dentro de la ficha del afiliado. */
+export interface ServicioResumen {
+  id: string;
+  fechaServicio: string;
+  sede: string;
+  tipoServicio: string;
+  valorTotal: number;
+  estadoFacturacion: string;
+  facturaURL?: string;
+  comprobantePagoURL?: string;
+}
+
+export interface RegistrarServicioInput {
+  fechaServicio: string;
+  sede: Sede;
+  convenioId: string;
+  afiliadoId?: string;
+  esAfiliado: boolean;
+  cedulaTitular?: string;
+  fallecido: { nombreCompleto: string; cedula?: string };
+  tipoServicio: TipoServicio;
+  tipoTraslado: TipoTraslado;
+  usaBoveda: boolean;
+  valorBoveda?: number;
+  tuvoMisaOCulto: "misa" | "culto" | "ninguno";
+  itemsServicio: ItemServicio[];
+  observaciones?: string;
+}
+
 export interface ActualizarServicioInput {
   id: string;
   fechaServicio?: string;
   convenioId?: string;
+  esAfiliado?: boolean;
+  cedulaTitular?: string;
   fallecido?: { nombreCompleto: string; cedula?: string };
   tipoServicio?: TipoServicio;
   tipoTraslado?: TipoTraslado;
   usaBoveda?: boolean;
+  valorBoveda?: number;
   tuvoMisaOCulto?: "misa" | "culto" | "ninguno";
   itemsServicio?: ItemServicio[];
   documentosAdjuntos?: string[];
   observaciones?: string;
-  esAfiliado: boolean;
-  cedulaTitular?: string;
-  valorBoveda?: number;
 }
+
+// ============================================================
+// Facturación
+// ============================================================
+
+export interface CambiarEstadoFacturacionInput {
+  servicioId: string;
+  nuevoEstado: EstadoFacturacion;
+  facturaURL?: string;
+  comprobantePagoURL?: string;
+}
+
+export interface ActualizarTipoPagoInput {
+  servicioId: string;
+  tipoPago: TipoPago;
+}
+
+// ============================================================
+// Pagos (mensualidad de afiliados)
+// ============================================================
+
 export interface Pago {
   id: string;
   afiliadoId: string;
@@ -286,19 +455,28 @@ export interface RegistrarPagoInput {
   periodoCubierto: string;
   comprobanteURL: string;
 }
-export type TipoPago = "pendiente" | "convenio_alcaldia" | "afiliado";
-export interface ActualizarTipoPagoInput { servicioId: string; tipoPago: TipoPago; }
 
-export interface UsuarioListado { uid: string; email: string; nombre: string; rol: "admin" | "empleado"; sede: string; deshabilitado: boolean; }
-export interface CrearUsuarioInput { nombre: string; email: string; rol: "admin" | "empleado"; sede: string; }
+// ============================================================
+// Reportes
+// ============================================================
 
-export interface ActualizarFlorInput { id: string; nombre?: string; precioCosto?: number; precioPublico?: number; fotoURL?: string; }
-export interface CambiarEstadoFacturacionInput {
-  servicioId: string;
-  nuevoEstado: "facturado" | "pagado";
-  facturaURL?: string;
-  comprobantePagoURL?: string;
+export type TipoFiltroReporte = "alcaldia" | "convenio" | "sede";
+
+export interface FilaReporte {
+  fecha: string;
+  fallecido: string;
+  valor: number;
+  descripcion: string;
+  usoBoveda: boolean;
 }
+
+export interface GenerarReporteInput {
+  filtroTipo: TipoFiltroReporte;
+  filtroValor: string;
+  fechaInicio: string;
+  fechaFin: string;
+}
+
 export type FiltroReporteMensual = "todos" | "convenioPendienteFacturar" | "facturado" | "facturadoAlcaldia";
 
 export interface FilaReporteMensual {
@@ -318,4 +496,24 @@ export interface GenerarReporteMensualInput {
   filtro: FiltroReporteMensual;
   fechaInicio: string;
   fechaFin: string;
+}
+
+// ============================================================
+// Usuarios
+// ============================================================
+
+export interface UsuarioListado {
+  uid: string;
+  email: string;
+  nombre: string;
+  rol: "admin" | "empleado";
+  sede: string;
+  deshabilitado: boolean;
+}
+
+export interface CrearUsuarioInput {
+  nombre: string;
+  email: string;
+  rol: "admin" | "empleado";
+  sede: string;
 }

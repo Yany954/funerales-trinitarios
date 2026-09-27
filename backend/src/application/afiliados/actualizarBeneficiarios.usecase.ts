@@ -19,15 +19,29 @@ export async function actualizarBeneficiarios(
   const existentesPorCedula = new Map(actual.beneficiarios.map((b) => [b.cedula, b]));
   const ahora = new Date();
 
-  const beneficiariosNuevos: Beneficiario[] = input.beneficiarios.map((entrada) => {
-    const existente = existentesPorCedula.get(entrada.cedula);
-    if (existente) {
-      // Conserva fecha de alta y estado de fallecimiento — editar el
-      // nombre no debe borrar ese historial.
-      return { ...existente, nombre: entrada.nombre, parentesco: entrada.parentesco };
-    }
-    return { ...entrada, fechaAdicion: ahora };
-  });
+const beneficiariosNuevos: Beneficiario[] = input.beneficiarios.map((entrada) => {
+  const existente = existentesPorCedula.get(entrada.cedula);
+  const fechaNacimiento = entrada.fechaNacimiento
+    ? new Date(entrada.fechaNacimiento)
+    : existente?.fechaNacimiento;
+
+  if (existente) {
+    return {
+      ...existente,
+      nombre: entrada.nombre,
+      parentesco: entrada.parentesco,
+      fechaNacimiento,
+    };
+  }
+
+  return {
+    nombre: entrada.nombre,
+    parentesco: entrada.parentesco,
+    cedula: entrada.cedula,
+    fechaNacimiento,
+    fechaAdicion: ahora,
+  };
+});
 
   const ocupados = contarBeneficiariosQueOcupanCupo(beneficiariosNuevos, ahora.getFullYear());
   if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {

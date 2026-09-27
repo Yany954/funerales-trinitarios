@@ -16,14 +16,16 @@ export async function duplicarTarifa(
   if (!tarifaOrigen) throw new Error(`No existe ninguna tarifa ${input.anioOrigen} para ese convenio.`);
 
   await repo.guardarTarifa(input.convenioId, {
-    anio: input.anioDestino,
-    servicioCompletoBasico: tarifaOrigen.servicioCompletoBasico,
-    servicioCompletoSemilujo: tarifaOrigen.servicioCompletoSemilujo,
-    servicioCompletoLujo: tarifaOrigen.servicioCompletoLujo,
-    iniciales: tarifaOrigen.iniciales,
-    finales: tarifaOrigen.finales,
-    trasladoLocal: tarifaOrigen.trasladoLocal,
-    trasladoFluvial: tarifaOrigen.trasladoFluvial,
-    metadata,
-  });
+  anio: input.anioDestino,
+  servicioCompletoBasico: tarifaOrigen.servicioCompletoBasico,
+  servicioCompletoSemilujo: tarifaOrigen.servicioCompletoSemilujo,
+  servicioCompletoLujo: tarifaOrigen.servicioCompletoLujo,
+  iniciales: tarifaOrigen.iniciales,
+  finales: tarifaOrigen.finales,
+  trasladoLocal: tarifaOrigen.trasladoLocal,
+  trasladoFluvial: tarifaOrigen.trasladoFluvial,
+  precioCofre: tarifaOrigen.precioCofre,
+  precioBoveda: tarifaOrigen.precioBoveda, 
+  metadata,
+});
 }

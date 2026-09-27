@@ -1,16 +1,19 @@
+
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { ConveniosRepository } from "../ports/convenios.repository";
 
 export interface GuardarTarifaInput {
   convenioId: string;
-  anio: string; // "2025", "2026"...
-  servicioCompletoBasico: number;
+  anio: string;
+  servicioCompletoBasico?: number;
   servicioCompletoSemilujo?: number;
   servicioCompletoLujo?: number;
-  iniciales: number;
-  finales: number;
-  trasladoLocal: number;
-  trasladoFluvial: number;
+  iniciales?: number;
+  finales?: number;
+  trasladoLocal?: number;
+  trasladoFluvial?: number;
+  precioCofre?: number;
+  precioBoveda?: number;
 }
 
 export async function guardarTarifa(

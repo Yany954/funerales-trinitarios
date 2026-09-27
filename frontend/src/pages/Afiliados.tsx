@@ -3,17 +3,19 @@ import { collection, onSnapshot, orderBy, query, where } from "firebase/firestor
 import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
-import type { Afiliado, Beneficiario, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
+import type { Afiliado, BeneficiarioEntrada, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
 import { useRol } from "../auth/RolContext";
 import PanelPagos from "../components/PanelPagos";
 import { Receipt } from "lucide-react";
-import { formatoPesos } from "../utils/formato";
+import { calcularEdad, formatoFecha, formatoPesos } from "../utils/formato";
 import PanelBeneficiarios from "../components/PanelBeneficiarios";
 import { Users } from "lucide-react";
 import PanelEditarAfiliado from "../components/PanelEditarAfiliado";
 import { eliminarAfiliado } from "../api/client";
 import { confirmarEliminar } from "../utils/confirmar";
 import PanelHistorialServicios from "../components/PanelHistorialServicios";
+import CampoPrecio from "../components/CampoPrecio";
+import { VEREDAS_POR_MUNICIPIO } from "../types";
 
 
 export default function Afiliados() {
@@ -30,11 +32,12 @@ export default function Afiliados() {
   const [planes, setPlanes] = useState<PlanFunerario[]>([]);
   const [mapaPlanes, setMapaPlanes] = useState<Record<string, string>>({});
   const [afiliadoPagos, setAfiliadoPagos] = useState<Afiliado | null>(null);
-  const [beneficiariosNuevo, setBeneficiariosNuevo] = useState<Beneficiario[]>([]);
+  const [beneficiariosNuevo, setBeneficiariosNuevo] = useState<BeneficiarioEntrada[]>([]);
   const [afiliadoBeneficiarios, setAfiliadoBeneficiarios] = useState<Afiliado | null>(null);
   const [resultadosBusqueda, setResultadosBusqueda] = useState<ResultadoBusquedaAfiliado[] | null>(null);
   const [afiliadoEditando, setAfiliadoEditando] = useState<Afiliado | null>(null);
   const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
+  const [sedeForm, setSedeForm] = useState<string>("");
 
   useEffect(() => {
     return onSnapshot(
@@ -100,7 +103,10 @@ export default function Afiliados() {
         numeroContrato: String(form.get("numeroContrato")),
         planId: String(form.get("planId")),
         sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
-        anioAfiliacion: Number(form.get("anioAfiliacion")),
+        fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
+        valorCuotaMensual: Number(form.get("valorCuotaMensual")),
+        fechaNacimiento: String(form.get("fechaNacimiento")),
+        vereda: String(form.get("vereda") || "") || undefined,
         beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim() && b.cedula.trim()),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
@@ -113,7 +119,7 @@ export default function Afiliados() {
       setGuardando(false);
     }
   }
-  function actualizarBeneficiarioNuevo(i: number, campo: keyof Beneficiario, valor: string) {
+  function actualizarBeneficiarioNuevo(i: number, campo: keyof BeneficiarioEntrada, valor: string) {
     setBeneficiariosNuevo((prev) => {
       const copia = [...prev];
       copia[i] = { ...copia[i], [campo]: valor };
@@ -160,13 +166,14 @@ export default function Afiliados() {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-tinta/70 sm:grid-cols-3">
-                  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
-                  <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
-                  <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
-                  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
-                  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
-                  <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
-                </div>
+  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
+  <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
+  <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
+  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
+  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
+  <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
+  <p>Nacimiento: <span className="text-tinta">{formatoFecha(afiliado.fechaNacimiento)} ({calcularEdad(afiliado.fechaNacimiento) ?? "—"} años)</span></p>
+</div>
               </div>
             ))
           )}
@@ -196,16 +203,23 @@ export default function Afiliados() {
               ))}
             </select>
             <input
-              name="anioAfiliacion"
-              type="number"
+              name="fechaAfiliacionReal"
+              type="date"
               required
-              defaultValue={new Date().getFullYear()}
-              placeholder="Año de afiliación"
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
             />
+            <label className="block text-xs text-tinta/50 sm:col-span-2">Fecha de nacimiento (titular)</label>
+<input name="fechaNacimiento" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <CampoPrecio name="valorCuotaMensual" required placeholder="Cuota mensual que paga" />
             <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
-              <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+              <select
+                name="sede"
+                required
+                value={sedeForm}
+                onChange={(e) => setSedeForm(e.target.value)}
+                className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
+              >
                 <option value="">Sede…</option>
                 <option value="Pailitas">Pailitas</option>
                 <option value="Tamalameque">Tamalameque</option>
@@ -215,6 +229,17 @@ export default function Afiliados() {
             ) : (
               <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
             )}
+
+            <select
+              name="vereda"
+              disabled={!(rol === "admin" ? sedeForm : sedeAsignada)}
+              className="rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50"
+            >
+              <option value="">Vereda (opcional)…</option>
+              {(VEREDAS_POR_MUNICIPIO[rol === "admin" ? sedeForm : sedeAsignada ?? ""] ?? []).map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
             <label className="flex items-center gap-2 text-sm text-tinta/70">
               <input type="checkbox" name="tieneSeguroVida" />
               Tiene seguro de vida
@@ -223,14 +248,15 @@ export default function Afiliados() {
           <div className="space-y-2">
             <p className="text-sm font-medium text-vino-900">Beneficiarios (opcional)</p>
             {beneficiariosNuevo.map((b, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2">
-                <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <input placeholder="Parentesco" value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="text-tinta/40 hover:text-red-600">
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-vino-50 p-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem] sm:border-0 sm:p-0">
+  <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+  <input placeholder="Parentesco" value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+  <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+  <input type="date" value={b.fechaNacimiento ?? ""} onChange={(e) => actualizarBeneficiarioNuevo(i, "fechaNacimiento", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+  <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
+    <Trash2 size={16} className="mx-auto" />
+  </button>
+</div>
             ))}
             <button
               type="button"
@@ -256,8 +282,10 @@ export default function Afiliados() {
           { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto },
           { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
           { encabezado: "N° Contrato", render: (a: Afiliado) => a.numeroContrato },
-          { encabezado: "Plan", render: (a: Afiliado) => `${mapaPlanes[a.planId] ?? a.planId} (${a.anioAfiliacion})` },
+          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
+          { encabezado: "Fecha afiliación", render: (a: Afiliado) => formatoFecha(a.fechaAfiliacionReal) },
           { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual) },
+          { encabezado: "Vereda", render: (a: Afiliado) => a.vereda ?? "—" },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (
