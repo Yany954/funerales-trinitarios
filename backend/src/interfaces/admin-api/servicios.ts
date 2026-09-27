@@ -9,13 +9,11 @@ import { cambiarEstadoFacturacion, CambiarEstadoFacturacionInput } from "../../a
 import { ConveniosRepositoryFirestore } from "../../infrastructure/firebase/convenio.repository.firestore";
 import { eliminarServicio } from "../../application/servicios/eliminarServicio.usecase";
 import { listarServiciosPorCedulaTitular } from "../../application/servicios/listarServiciosPorCedulaTitular.usecase";
-import { ItemBovedaRepositoryFirestore } from "../../infrastructure/firebase/item-boveda.repository.firestore";
 import { actualizarTipoPago, ActualizarTipoPagoInput } from "../../application/servicios/actualizarTipodePago.usecase";
 
 const conveniosRepo = new ConveniosRepositoryFirestore();
 const repo = new ServiciosRepositoryFirestore();
 const bovedaRepo = new BovedaRepositoryFirestore();
-const itemBovedaRepo = new ItemBovedaRepositoryFirestore();
 
 export const registrarServicioFn = onCall<RegistrarServicioInput>(async (request) => {
   const uid = requireAuth(request);

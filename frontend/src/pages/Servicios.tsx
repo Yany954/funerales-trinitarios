@@ -165,7 +165,7 @@ export default function Servicios() {
           tipoServicio: String(form.get("tipoServicio")) as TipoServicio,
           tipoTraslado: String(form.get("tipoTraslado")) as TipoTraslado,
           usaBoveda: usaBovedaForm,
-          valorBoveda: usaBovedaForm ? valorBovedaForm : undefined,
+          valorBoveda: usaBovedaForm ? Number(form.get("valorBovedaCampo") || 0) : undefined,
           tuvoMisaOCulto: String(form.get("tuvoMisaOCulto")) as "misa" | "culto" | "ninguno",
           itemsServicio: itemsValidos,
           documentosAdjuntos: documentos,
@@ -181,7 +181,7 @@ export default function Servicios() {
           tipoServicio: String(form.get("tipoServicio")) as TipoServicio,
           tipoTraslado: String(form.get("tipoTraslado")) as TipoTraslado,
           usaBoveda: usaBovedaForm,
-          valorBoveda: usaBovedaForm ? valorBovedaForm : undefined,
+          valorBoveda: usaBovedaForm ? Number(form.get("valorBovedaCampo") || 0) : undefined,
           tuvoMisaOCulto: String(form.get("tuvoMisaOCulto")) as "misa" | "culto" | "ninguno",
           itemsServicio: itemsValidos,
         });
