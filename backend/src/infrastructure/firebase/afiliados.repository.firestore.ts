@@ -2,6 +2,7 @@ import { db, Timestamp } from "./admin";
 import { Afiliado, PersonaCubierta } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
+  import { Beneficiario } from "../../domain/entities/afiliado";
 
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
@@ -23,12 +24,20 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
     id,
     ...data,
     fechaAfiliacion: data.fechaAfiliacion.toDate(),
-    ultimoPago: data.ultimoPago
-      ? { ...data.ultimoPago, fecha: data.ultimoPago.fecha.toDate() }
-      : null,
+    ultimoPago: data.ultimoPago ? { ...data.ultimoPago, fecha: data.ultimoPago.fecha.toDate() } : null,
+    beneficiarios: (data.beneficiarios ?? []).map(convertirBeneficiario), // ← nuevo
     metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
   } as Afiliado;
 }
+
+function convertirBeneficiario(b: any): Beneficiario {
+  return {
+    ...b,
+    fechaAdicion: b.fechaAdicion?.toDate ? b.fechaAdicion.toDate() : b.fechaAdicion,
+    fechaFallecimiento: b.fechaFallecimiento?.toDate ? b.fechaFallecimiento.toDate() : b.fechaFallecimiento,
+  };
+}
+
 
 export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
   async crear(afiliado: Omit<Afiliado, "id">): Promise<Afiliado> {
@@ -142,4 +151,6 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
 
     await batch.commit();
   }
+
+
 }

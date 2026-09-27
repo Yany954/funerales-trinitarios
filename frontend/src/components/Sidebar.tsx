@@ -19,7 +19,7 @@ import { useRol } from "../auth/RolContext";
 const items = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, end: true, soloAdmin: false },
   { to: "/afiliados", label: "Afiliados", icon: Users, soloAdmin: false },
-  { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: false },
+  { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: true },
   { to: "/servicios", label: "Servicios", icon: ClipboardList, soloAdmin: true },
   { to: "/facturacion", label: "Facturación", icon: Receipt, soloAdmin: true },
   { to: "/convenios", label: "Convenios", icon: Handshake, soloAdmin: true },

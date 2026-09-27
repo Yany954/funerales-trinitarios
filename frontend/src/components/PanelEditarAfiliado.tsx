@@ -26,6 +26,8 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
         cedula: String(form.get("cedula")),
         numeroContrato: String(form.get("numeroContrato")),
         planId: String(form.get("planId")),
+        anioAfiliacion: Number(form.get("anioAfiliacion")),
+        valorCuotaMensual: Number(form.get("valorCuotaMensual")),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
       onCerrar();

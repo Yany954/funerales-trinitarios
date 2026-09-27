@@ -9,4 +9,5 @@ export interface ServiciosRepository {
   actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio>;
   eliminar(id: string): Promise<void>;
   buscarPorCedulaTitular(cedula: string): Promise<Servicio[]>;
+  buscarPorRangoFechas(desde: Date, hasta: Date, sede?: string): Promise<Servicio[]>;
 }

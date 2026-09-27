@@ -40,5 +40,6 @@ export interface Servicio {
   comprobantePagoURL?: string;
   metadata: MetadataCambio;
   esAfiliado: boolean;
+  tipoPago?: "pendiente" | "convenio_alcaldia" | "afiliado";
   cedulaTitular?: string;
 }

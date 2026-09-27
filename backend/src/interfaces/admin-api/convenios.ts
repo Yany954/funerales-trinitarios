@@ -5,6 +5,7 @@ import { crearConvenio, CrearConvenioInput } from "../../application/convenios/c
 import { guardarTarifa, GuardarTarifaInput } from "../../application/convenios/guardarTarifa.usecase";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { actualizarConvenio, ActualizarConvenioInput } from "../../application/convenios/actualizarConvenio.usecase";
+import { duplicarTarifa, DuplicarTarifaInput } from "../../application/convenios/duplicarTarifa.usecase";
 
 const repo = new ConveniosRepositoryFirestore();
 
@@ -33,4 +34,11 @@ export const actualizarConvenioFn = onCall<ActualizarConvenioInput>(async (reque
   exigirAdmin(request);
   const convenio = await actualizarConvenio(repo, request.data, metadataHumano(uid));
   return { convenio };
+});
+
+export const duplicarTarifaFn = onCall<DuplicarTarifaInput>(async (request) => {
+  const uid = requireAuth(request);
+  exigirAdmin(request);
+  await duplicarTarifa(repo, request.data, metadataHumano(uid));
+  return { ok: true };
 });

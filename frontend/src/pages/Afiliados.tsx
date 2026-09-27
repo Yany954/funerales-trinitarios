@@ -3,7 +3,7 @@ import { collection, onSnapshot, orderBy, query, where } from "firebase/firestor
 import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
-import type { Afiliado, Beneficiario, PlanFunerario, ResultadoBusquedaAfiliado } from "../types";
+import type { Afiliado, Beneficiario, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
 import { useRol } from "../auth/RolContext";
 import PanelPagos from "../components/PanelPagos";
 import { Receipt } from "lucide-react";
@@ -97,8 +97,10 @@ export default function Afiliados() {
       await crearAfiliado({
         nombreCompleto: String(form.get("nombreCompleto")),
         cedula: String(form.get("cedula")),
-        numeroContrato: String(form.get("numeroContrato")), // ← nuevo
+        numeroContrato: String(form.get("numeroContrato")),
         planId: String(form.get("planId")),
+        sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
+        anioAfiliacion: Number(form.get("anioAfiliacion")),
         beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim() && b.cedula.trim()),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
@@ -190,9 +192,17 @@ export default function Afiliados() {
             <select name="planId" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Plan…</option>
               {planes.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre} — {formatoPesos(p.valorMensual)}/mes</option>
+                <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
+            <input
+              name="anioAfiliacion"
+              type="number"
+              required
+              defaultValue={new Date().getFullYear()}
+              placeholder="Año de afiliación"
+              className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
+            />
             <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
               <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
@@ -245,8 +255,9 @@ export default function Afiliados() {
         columnas={[
           { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto },
           { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
-          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
           { encabezado: "N° Contrato", render: (a: Afiliado) => a.numeroContrato },
+          { encabezado: "Plan", render: (a: Afiliado) => `${mapaPlanes[a.planId] ?? a.planId} (${a.anioAfiliacion})` },
+          { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual) },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (

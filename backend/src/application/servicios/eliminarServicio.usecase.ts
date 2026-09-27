@@ -1,6 +1,6 @@
 import { ServiciosRepository } from "../ports/servicios.repository";
 import { BovedaRepository } from "../ports/boveda.repository";
-import { desvincularBovedaDeServicio } from "../boveda/vincularBovedaServicio.usecase";
+import { desvincularBovedaDeServicio } from "../boveda/vincularBovedaAServicio.usecase";
 
 export async function eliminarServicio(
   serviciosRepo: ServiciosRepository,

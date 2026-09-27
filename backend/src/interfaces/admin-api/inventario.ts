@@ -8,7 +8,7 @@ const repo = new InventarioRepositoryFirestore();
 
 export const actualizarInventarioFn = onCall<ActualizarInventarioInput>(async (request) => {
   const uid = requireAuth(request);
-  if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
+  if (request.auth?.token.rol !== "admin") {
     throw new HttpsError("permission-denied", "No puedes editar el inventario de otra sede.");
   }
   const registro = await actualizarInventario(repo, request.data, metadataHumano(uid));

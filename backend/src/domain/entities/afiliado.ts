@@ -28,6 +28,8 @@ export interface Afiliado {
   aseguradora?: string;
   observaciones?: string;
   numeroContrato: string;
+  anioAfiliacion: number;
+  valorCuotaMensual: number;
   metadata: MetadataCambio;
 }
 
@@ -41,4 +43,18 @@ export interface PersonaCubierta {
   esTitular: boolean;
   parentesco?: string;
   afiliadoId: string;
+}
+export interface BeneficiarioEntrada {
+  nombre: string;
+  parentesco: string;
+  cedula: string;
+}
+export interface Beneficiario {
+  nombre: string;
+  parentesco: string;
+  cedula: string;
+  fechaAdicion: Date;
+  fallecido?: boolean;
+  fechaFallecimiento?: Date;
+  certificadoDefuncionURL?: string;
 }

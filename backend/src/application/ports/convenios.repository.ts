@@ -6,4 +6,5 @@ export interface ConveniosRepository {
   guardarTarifa(convenioId: string, tarifa: TarifaConvenio): Promise<void>;
   obtenerPorId(id: string): Promise<Convenio | null>;
   actualizar(id: string, cambios: Partial<Omit<Convenio, "id">>): Promise<Convenio>;
+  obtenerTarifa(convenioId: string, anio: string): Promise<TarifaConvenio | null>;
 }

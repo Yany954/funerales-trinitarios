@@ -16,6 +16,7 @@ export default function Planes() {
 
   const [planIdPrecio, setPlanIdPrecio] = useState("");
   const [anioPrecio, setAnioPrecio] = useState("");
+  const [valorInicialPrecio, setValorInicialPrecio] = useState<number | undefined>(undefined);
   const [guardandoPrecio, setGuardandoPrecio] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,18 @@ export default function Planes() {
     [historial, planIdPrecio, anioPrecio]
   );
 
+  function elegirPrecioExistente(planId: string, anio: string, valorMensual: number) {
+    setPlanIdPrecio(planId);
+    setAnioPrecio(anio);
+    setValorInicialPrecio(valorMensual);
+  }
+
+  function nuevoPrecioEnBlanco() {
+    setPlanIdPrecio("");
+    setAnioPrecio("");
+    setValorInicialPrecio(undefined);
+  }
+
   async function manejarCrearOEditarPlan(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -50,7 +63,7 @@ export default function Planes() {
       if (editandoPlan) {
         await actualizarPlan({ id: editandoPlan.id, nombre });
       } else {
-        await crearPlan({ nombre, valorMensual: 0 }); // el precio real se carga abajo, en "Precio por año"
+        await crearPlan({ nombre, valorMensual: 0 });
       }
       setEditandoPlan(null);
       (e.target as HTMLFormElement).reset();
@@ -72,8 +85,7 @@ export default function Planes() {
         anio: anioPrecio,
         valorMensual: Number(form.get("valorMensual")),
       });
-      setPlanIdPrecio("");
-      setAnioPrecio("");
+      nuevoPrecioEnBlanco();
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el precio.");
@@ -125,9 +137,17 @@ export default function Planes() {
               <div key={`${h.planId}-${h.anio}`} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
                   <p className="font-medium text-vino-900">{planes.find((p) => p.id === h.planId)?.nombre ?? h.planId} — {h.anio}</p>
-                  <p className="text-xs text-tinta/50">{formatoPesos(h.valorMensual)}/mes</p>
+                  <p className="text-xs text-tinta/50">
+                    {formatoPesos(h.valorMensual)}/mes — vigente desde {h.anio}
+                    {(() => {
+                      const anteriorMasCercano = historial
+                        .filter((x) => x.planId === h.planId && Number(x.anio) > Number(h.anio))
+                        .sort((a, b) => Number(a.anio) - Number(b.anio))[0];
+                      return anteriorMasCercano ? ` hasta ${Number(anteriorMasCercano.anio) - 1}` : " (precio actual)";
+                    })()}
+                  </p>
                 </div>
-                <button onClick={() => { setPlanIdPrecio(h.planId); setAnioPrecio(h.anio); }} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
+                <button onClick={() => elegirPrecioExistente(h.planId, h.anio, h.valorMensual)} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
               </div>
             ))}
           {historial.length === 0 && <p className="px-4 py-6 text-center text-sm text-tinta/50">Todavía no hay precios registrados.</p>}
@@ -136,18 +156,21 @@ export default function Planes() {
 
       <div className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
         <h3 className="font-display text-base text-vino-900">Precio por año</h3>
+        <p className="text-xs text-tinta/50">
+          El precio queda vigente desde el año que registres hasta el siguiente cambio registrado — no hace falta repetirlo cada año si se mantuvo igual.
+        </p>
         {precioExistente && (
           <p className="rounded-lg bg-vino-50 px-3 py-2 text-xs text-vino-700">
             Ya existe un precio {anioPrecio} para este plan — corrígelo y guarda para actualizarlo.
           </p>
         )}
-        <form key={`${planIdPrecio}-${anioPrecio}`} onSubmit={manejarGuardarPrecio} className="grid gap-3 sm:grid-cols-3">
+        <form onSubmit={manejarGuardarPrecio} className="grid gap-3 sm:grid-cols-3">
           <select value={planIdPrecio} onChange={(e) => setPlanIdPrecio(e.target.value)} required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
             <option value="">Plan…</option>
             {planes.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
           <input value={anioPrecio} onChange={(e) => setAnioPrecio(e.target.value)} required placeholder="Año (ej. 2026)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-          <CampoPrecio name="valorMensual" required placeholder="Mensualidad" valorInicial={precioExistente?.valorMensual} />
+          <CampoPrecio name="valorMensual" required placeholder="Mensualidad" valorInicial={valorInicialPrecio} />
           {error && <p className="text-sm text-red-600 sm:col-span-3">{error}</p>}
           <button type="submit" disabled={guardandoPrecio} className="flex items-center justify-center gap-2 rounded-lg bg-buganvilla px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 sm:col-span-3">
             <CreditCard size={16} />

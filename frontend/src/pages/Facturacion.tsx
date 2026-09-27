@@ -87,8 +87,8 @@ export default function Facturacion() {
             encabezado: "Estado",
             render: (s: Servicio) => (
               <span className={`rounded-full px-2.5 py-1 text-xs ${s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
-                  : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
-                    : "bg-amber-50 text-amber-700"
+                : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
+                  : "bg-amber-50 text-amber-700"
                 }`}>
                 {s.estadoFacturacion}
               </span>

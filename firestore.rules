@@ -7,7 +7,6 @@ service cloud.firestore {
     function esAdmin() { return request.auth.token.rol == "admin"; }
     function miSede() { return request.auth.token.sede; }
 
-    // Colecciones con dueño de sede: solo ve su sede, o todas si es admin
     match /afiliados/{id} {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;
@@ -20,7 +19,25 @@ service cloud.firestore {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;
     }
-    match /{path=**}/tarifas/{tarifaId} {
+    match /bovedas/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
+    match /inventario_cofres/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
+
+    match /convenios/{document=**}   { allow read: if estaAutenticado(); allow write: if false; }
+    match /tipos_cofre/{id}          { allow read: if estaAutenticado(); allow write: if false; }
+    match /flores/{id}               { allow read: if estaAutenticado(); allow write: if false; }
+    match /planes_funerarios/{id}    { allow read: if estaAutenticado(); allow write: if false; }
+    match /personas_cubiertas/{id}   { allow read: if estaAutenticado(); allow write: if false; }
+    match /items_boveda/{id}         { allow read: if estaAutenticado(); allow write: if false; }
+
+    // Reglas especiales para collectionGroup (subcolecciones "tarifas" de
+    // convenios e "historial" de planes) — Firestore las exige aparte.
+    match /{path=**}/tarifas/{anioId} {
       allow read: if estaAutenticado();
       allow write: if false;
     }
@@ -28,20 +45,5 @@ service cloud.firestore {
       allow read: if estaAutenticado();
       allow write: if false;
     }
-    // Solo administradores (ej. cofres, precios)
-    match /tipos_cofre/{id} {
-      allow read: if estaAutenticado() && esAdmin();
-      allow write: if false;
-    }
-
-    // Catálogos compartidos entre todas las sedes — cualquier staff autenticado los lee
-    match /convenios/{document=**} {
-      allow read: if estaAutenticado();
-      allow write: if false;
-    }
-    match /planes_funerarios/{id}   { allow read: if estaAutenticado(); allow write: if false; }
-    match /flores/{id}              { allow read: if estaAutenticado(); allow write: if false; }
-    match /bovedas/{id}             { allow read: if estaAutenticado(); allow write: if false; }
-    match /personas_cubiertas/{id}  { allow read: if estaAutenticado(); allow write: if false; }
   }
 }

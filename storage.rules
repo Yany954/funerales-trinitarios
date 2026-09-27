@@ -38,5 +38,14 @@ service firebase.storage {
       allow read: if estaAutenticado();
       allow write: if false;
     }
+    match /afiliados/{allPaths=**} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado()
+        && request.resource.size < 15 * 1024 * 1024;
+    }
+    match /{path=**}/historial/{anioId} {
+  allow read: if estaAutenticado();
+  allow write: if false;
+}
   }
 }

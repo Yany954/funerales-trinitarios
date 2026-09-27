@@ -7,16 +7,25 @@ import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { actualizarBeneficiarios, ActualizarBeneficiariosInput } from "../../application/afiliados/actualizarBeneficiarios.usecase";
 import { actualizarAfiliado, ActualizarAfiliadoInput } from "../../application/afiliados/actualizarAfiliados.usecase";
 import { eliminarAfiliado } from "../../application/afiliados/eliminarAfiliado.usecase";
+import { registrarFallecimientoBeneficiario, RegistrarFallecimientoBeneficiarioInput } from "../../application/afiliados/registrarFallecimientoBeneficiario.usecase";
+import { PlanesRepositoryFirestore } from "../../infrastructure/firebase/plan.repository.firestore";
 
 const repo = new AfiliadosRepositoryFirestore();
-
+const planesRepo = new PlanesRepositoryFirestore();
+function aFechaSerializable(valor: unknown): unknown {
+  if (!valor) return valor;
+  const conToDate = valor as { toDate?: () => Date };
+  if (conToDate.toDate) return conToDate.toDate().toISOString();
+  if (valor instanceof Date) return valor.toISOString();
+  return valor;
+}
 /** El dashboard llama esto para crear un afiliado nuevo. */
 export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   const uid = requireAuth(request);
   if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes crear afiliados fuera de tu sede.");
   }
-  const afiliado = await crearAfiliado(repo, request.data, metadataHumano(uid));
+  const afiliado = await crearAfiliado(repo, planesRepo, request.data, metadataHumano(uid));
   return { afiliado };
 });
 
@@ -45,7 +54,7 @@ export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (reque
   if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
   }
-  const actualizado = await actualizarAfiliado(repo, request.data, metadataHumano(uid));
+  const actualizado = await actualizarAfiliado(repo, planesRepo, request.data, metadataHumano(uid));
   return { afiliado: actualizado };
 });
 
@@ -56,4 +65,24 @@ export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
   }
   await eliminarAfiliado(repo, request.data.id);
   return { ok: true };
+});
+
+export const registrarFallecimientoBeneficiarioFn = onCall<RegistrarFallecimientoBeneficiarioInput>(async (request) => {
+  const uid = requireAuth(request);
+  const afiliado = await repo.obtenerPorId(request.data.afiliadoId);
+  if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
+  if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
+    throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
+  }
+  const actualizado = await registrarFallecimientoBeneficiario(repo, request.data, metadataHumano(uid));
+  return {
+    afiliado: {
+      ...actualizado,
+      beneficiarios: actualizado.beneficiarios.map((b) => ({
+        ...b,
+        fechaAdicion: aFechaSerializable(b.fechaAdicion),
+        fechaFallecimiento: aFechaSerializable(b.fechaFallecimiento),
+      })),
+    },
+  };
 });

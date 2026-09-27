@@ -23,7 +23,7 @@ export const router = createBrowserRouter([
       { path: "afiliados", element: <Afiliados /> },
       { path: "servicios", element: <RutaSoloAdmin><Servicios /></RutaSoloAdmin> },
       { path: "convenios", element: <RutaSoloAdmin><Convenios /></RutaSoloAdmin> },
-      { path: "inventario", element: <Inventario /> },
+      { path: "inventario", element: <RutaSoloAdmin><Inventario /></RutaSoloAdmin> },
       { path: "bovedas", element: <RutaSoloAdmin><Bovedas /></RutaSoloAdmin> },
       { path: "flores", element: <RutaSoloAdmin><Flores /></RutaSoloAdmin> },
       { path: "reportes", element: <RutaSoloAdmin><Reportes /></RutaSoloAdmin> },

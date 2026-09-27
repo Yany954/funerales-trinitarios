@@ -5,4 +5,5 @@ export interface PlanesRepository {
   listar(): Promise<PlanFunerario[]>;
   actualizar(id: string, cambios: Partial<Omit<PlanFunerario, "id">>): Promise<PlanFunerario>;
   guardarPrecioAnio(planId: string, anio: string, valorMensual: number, metadata: import("../../domain/value-objects/metadata-cambio").MetadataCambio): Promise<void>;
+  obtenerTarifaVigente(planId: string, anio: number): Promise<number | null>;
 }

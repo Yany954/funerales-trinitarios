@@ -6,16 +6,17 @@ import { registrarBoveda } from "../../application/boveda/registrarBoveda.usecas
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { RegistrarBovedaInput } from "../../application/boveda/registrarBoveda.usecase";
 import { EstadoBoveda } from "../../domain/entities/boveda";
+import { ItemBovedaRepositoryFirestore } from "../../infrastructure/firebase/item-boveda.repository.firestore";
 
 const repo = new BovedaRepositoryFirestore();
+const itemBovedaRepo = new ItemBovedaRepositoryFirestore();
 
-/** El dashboard llama esto para crear una boveda nueva. */
 export const registrarBovedaFn = onCall<RegistrarBovedaInput>(async (request) => {
   const uid = requireAuth(request);
   if (request.auth?.token.rol !== "admin") {
-    throw new HttpsError("permission-denied", "No puedes registrar bóvedas de otra sede.");
+    throw new HttpsError("permission-denied", "Solo un administrador puede registrar bóvedas.");
   }
-  const boveda = await registrarBoveda(repo, request.data, metadataHumano(uid));
+  const boveda = await registrarBoveda(repo, itemBovedaRepo, request.data, metadataHumano(uid));
   return { boveda };
 });
 
@@ -25,4 +26,3 @@ export const listarBovedasPorEstadoFn = onCall<{ estado: EstadoBoveda }>(async (
   const bovedas = await listarBovedasPorEstado(repo, request.data.estado);
   return { bovedas };
 });
-

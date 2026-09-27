@@ -14,4 +14,5 @@ export interface Boveda {
   incluyeExhumacion: boolean;
   estado: EstadoBoveda;
   metadata: MetadataCambio;
+  itemBovedaId?: string;
 }

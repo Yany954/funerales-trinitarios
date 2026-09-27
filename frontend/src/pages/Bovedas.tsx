@@ -9,6 +9,10 @@ import type { Boveda, EstadoBoveda, Sede } from "../types";
 import { useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import CampoPrecio from "../components/CampoPrecio";
+  import { crearItemBoveda, actualizarItemBoveda, eliminarItemBoveda } from "../api/client";
+import { confirmarEliminar } from "../utils/confirmar";
+import { VEREDAS_POR_MUNICIPIO } from "../types";
+import type { ItemBoveda } from "../types";
 const SEDES: Sede[] = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"];
 
 const PESTAÑAS: { valor: EstadoBoveda | "todas"; etiqueta: string }[] = [
@@ -35,6 +39,20 @@ export default function Bovedas() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idCopiado, setIdCopiado] = useState<string | null>(null);
+
+
+// junto a tus otros useState:
+const [itemsBoveda, setItemsBoveda] = useState<ItemBoveda[]>([]);
+const [mostrarCatalogo, setMostrarCatalogo] = useState(false);
+const [editandoItem, setEditandoItem] = useState<ItemBoveda | null>(null);
+
+const [itemSeleccionado, setItemSeleccionado] = useState("");
+const [usarValorManual, setUsarValorManual] = useState(false);
+const [municipioForm, setMunicipioForm] = useState("Pailitas");
+
+useEffect(() => {
+  return onSnapshot(query(collection(db, "items_boveda")), (snap) => setItemsBoveda(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ItemBoveda))));
+}, []);
 
   useEffect(() => {
     if (cargandoRol) return;
@@ -67,13 +85,14 @@ export default function Bovedas() {
     const form = new FormData(e.currentTarget);
     try {
       await registrarBoveda({
-        sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
-        servicioId: String(form.get("servicioId") || "") || undefined,
-        zona: String(form.get("zona")),
-        fechaInicio: String(form.get("fechaInicio")),
-        valorArriendo: Number(form.get("valorArriendo")),
-        incluyeExhumacion: form.get("incluyeExhumacion") === "on",
-      });
+  sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
+  servicioId: String(form.get("servicioId") || "") || undefined,
+  zona: String(form.get("zona") || ""),
+  itemBovedaId: usarValorManual ? undefined : itemSeleccionado || undefined,
+  valorArriendo: usarValorManual ? Number(form.get("valorArriendoManual")) : undefined,
+  fechaInicio: String(form.get("fechaInicio")),
+  incluyeExhumacion: form.get("incluyeExhumacion") === "on",
+});
       setMostrarFormulario(false);
       (e.target as HTMLFormElement).reset();
     } catch (err) {
@@ -82,6 +101,24 @@ export default function Bovedas() {
       setGuardando(false);
     }
   }
+  async function manejarGuardarItem(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  const form = new FormData(e.currentTarget);
+  const datos = { nombre: String(form.get("nombre")), zona: String(form.get("zonaItem")), precio: Number(form.get("precioItem")) };
+  if (editandoItem) {
+    await actualizarItemBoveda({ id: editandoItem.id, ...datos });
+  } else {
+    await crearItemBoveda(datos);
+  }
+  setEditandoItem(null);
+  (e.target as HTMLFormElement).reset();
+}
+
+async function manejarEliminarItem(item: ItemBoveda) {
+  const confirmado = await confirmarEliminar(item.nombre);
+  if (!confirmado) return;
+  await eliminarItemBoveda(item.id);
+}
   function copiarId(id: string) {
     navigator.clipboard.writeText(id);
     setIdCopiado(id);
@@ -89,7 +126,39 @@ export default function Bovedas() {
   }
 
   return (
-    <div className="space-y-6">
+    
+    
+       <div className="space-y-6">
+      {/* Catálogo de precios de bóveda */}
+      <div className="rounded-xl border border-vino-100 bg-white p-4">
+        <button onClick={() => setMostrarCatalogo((v) => !v)} className="text-sm font-medium text-vino-900">
+          {mostrarCatalogo ? "▾" : "▸"} Catálogo de precios de bóveda ({itemsBoveda.length})
+        </button>
+        {mostrarCatalogo && (
+          <div className="mt-3 space-y-3">
+            <form onSubmit={manejarGuardarItem} className="grid gap-2 sm:grid-cols-4">
+              <input name="nombre" required defaultValue={editandoItem?.nombre} placeholder="Nombre (ej. Bóveda Pailitas-Pelaya)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
+              <input name="zonaItem" required defaultValue={editandoItem?.zona} placeholder="Zona que cubre" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+              <CampoPrecio name="precioItem" required valorInicial={editandoItem?.precio} placeholder="Precio" />
+              <button type="submit" className="sm:col-span-4 rounded-lg bg-vino-700 px-4 py-2 text-sm text-white">
+                {editandoItem ? "Guardar cambios" : "Agregar al catálogo"}
+              </button>
+            </form>
+            <div className="divide-y divide-vino-50">
+              {itemsBoveda.map((i) => (
+                <div key={i.id} className="flex items-center justify-between py-2 text-sm">
+                  <span>{i.nombre} — {formatoPesos(i.precio)}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditandoItem(i)} className="text-vino-700 hover:underline">Editar</button>
+                    <button onClick={() => manejarEliminarItem(i)} className="text-red-600 hover:underline">Eliminar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
       {/* Resumen rápido de la sede/filtro actual */}
       <div className="grid grid-cols-3 gap-3">
         {(["vigente", "por vencer", "vencida"] as const).map((estado) => (
@@ -134,9 +203,36 @@ export default function Bovedas() {
               <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
             )}
             <input name="servicioId" placeholder="ID del servicio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="zona" required placeholder="Zona (ej. Pailitas-Pelaya-Tamalameque)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <select
+  value={municipioForm}
+  onChange={(e) => setMunicipioForm(e.target.value)}
+  className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
+>
+  {Object.keys(VEREDAS_POR_MUNICIPIO).map((m) => <option key={m} value={m}>{m}</option>)}
+</select>
+<select name="zona" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+  {VEREDAS_POR_MUNICIPIO[municipioForm].map((v) => <option key={v} value={`${municipioForm} - ${v}`}>{v}</option>)}
+</select>
+
+<select
+  value={itemSeleccionado}
+  onChange={(e) => setItemSeleccionado(e.target.value)}
+  disabled={usarValorManual}
+  className="rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50"
+>
+  <option value="">Ítem del catálogo…</option>
+  {itemsBoveda.map((i) => <option key={i.id} value={i.id}>{i.nombre} — {formatoPesos(i.precio)}</option>)}
+</select>
+
+<label className="flex items-center gap-2 text-sm text-tinta/70">
+  <input type="checkbox" checked={usarValorManual} onChange={(e) => setUsarValorManual(e.target.checked)} />
+  Ingresar valor manual (en vez del catálogo)
+</label>
+{usarValorManual && (
+  <CampoPrecio name="valorArriendoManual" placeholder="Valor de la bóveda" />
+)}
             <input name="fechaInicio" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <CampoPrecio name="valorArriendo" required placeholder="Valor del arriendo" />
+            
             <label className="flex items-center gap-2 text-sm text-tinta/70">
               <input type="checkbox" name="incluyeExhumacion" />
               Incluye exhumación

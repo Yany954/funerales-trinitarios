@@ -11,7 +11,7 @@ import {
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
-import type { CrearAfiliadoInput, Afiliado, GuardarPrecioAnioInput, ActualizarPlanInput, ServicioResumen } from "../types";
+import type { CrearAfiliadoInput, Afiliado, GuardarPrecioAnioInput, ActualizarPlanInput, ServicioResumen, DuplicarTarifaInput, FilaReporteMensual, ItemBoveda, ActualizarItemBovedaInput, CrearItemBovedaInput, ActualizarTipoPagoInput } from "../types";
 import type { RegistrarBovedaInput, Boveda, EstadoBoveda } from "../types";
 import type { RegistrarServicioInput, Servicio } from "../types";
 import type { CrearConvenioInput, GuardarTarifaInput, Convenio, ActualizarConvenioInput } from "../types";
@@ -19,7 +19,7 @@ import type { CrearTipoCofreInput, TipoCofre } from "../types";
 import type { CrearPlanInput, PlanFunerario } from "../types";
 import type { CrearFlorInput, Flor } from "../types";
 import type { ActualizarInventarioInput, InventarioCofre } from "../types";
-import type { GenerarReporteInput, FilaReporte } from "../types";
+import type { GenerarReporteInput, FilaReporte,GenerarReporteMensualInput } from "../types";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 import type { ActualizarTipoCofreInput } from "../types";
 import type { ActualizarServicioInput } from "../types";
@@ -27,7 +27,7 @@ import type { RegistrarPagoInput, Pago } from "../types";
 import type { UsuarioListado, CrearUsuarioInput } from "../types";
 import type { ActualizarFlorInput } from "../types";
 import type { CambiarEstadoFacturacionInput } from "../types";
-import type { ActualizarBeneficiariosInput } from "../types";
+import type { ActualizarBeneficiariosInput,RegistrarFallecimientoBeneficiarioInput } from "../types";
 import type { ResultadoBusquedaAfiliado } from "../types";
 import type { ActualizarAfiliadoInput } from "../types";
 
@@ -108,6 +108,11 @@ export async function actualizarBeneficiarios(input: ActualizarBeneficiariosInpu
   const fn = httpsCallable<ActualizarBeneficiariosInput, { afiliado: Afiliado }>(functions, "actualizarBeneficiariosFn");
   const res = await fn(input);
   return res.data.afiliado;
+
+}export async function registrarFallecimientoBeneficiario(input: RegistrarFallecimientoBeneficiarioInput): Promise<Afiliado> {
+  const fn = httpsCallable<RegistrarFallecimientoBeneficiarioInput, { afiliado: Afiliado }>(functions, "registrarFallecimientoBeneficiarioFn");
+  const res = await fn(input);
+  return res.data.afiliado;
 }
 
 
@@ -121,6 +126,20 @@ export async function listarBovedasPorEstado(estado?: EstadoBoveda): Promise<Bov
   const fn = httpsCallable<{ estado?: EstadoBoveda }, { bovedas: Boveda[] }>(functions, "listarBovedasPorEstadoFn");
   const res = await fn({ estado });
   return res.data.bovedas;
+}
+export async function crearItemBoveda(input: CrearItemBovedaInput): Promise<ItemBoveda> {
+  const fn = httpsCallable<CrearItemBovedaInput, { item: ItemBoveda }>(functions, "crearItemBovedaFn");
+  const res = await fn(input);
+  return res.data.item;
+}
+export async function actualizarItemBoveda(input: ActualizarItemBovedaInput): Promise<ItemBoveda> {
+  const fn = httpsCallable<ActualizarItemBovedaInput, { item: ItemBoveda }>(functions, "actualizarItemBovedaFn");
+  const res = await fn(input);
+  return res.data.item;
+}
+export async function eliminarItemBoveda(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarItemBovedaFn");
+  await fn({ id });
 }
 
 export async function registrarServicio(input: RegistrarServicioInput): Promise<Servicio> {
@@ -151,6 +170,10 @@ export async function actualizarConvenio(input: ActualizarConvenioInput): Promis
   const fn = httpsCallable<ActualizarConvenioInput, { convenio: Convenio }>(functions, "actualizarConvenioFn");
   const res = await fn(input);
   return res.data.convenio;
+}
+export async function duplicarTarifa(input: DuplicarTarifaInput): Promise<void> {
+  const fn = httpsCallable<DuplicarTarifaInput, { ok: boolean }>(functions, "duplicarTarifaFn");
+  await fn(input);
 }
 export async function crearTipoCofre(input: CrearTipoCofreInput): Promise<TipoCofre> {
   const fn = httpsCallable<CrearTipoCofreInput, { cofre: TipoCofre }>(functions, "crearTipoCofreFn");
@@ -190,6 +213,11 @@ export async function generarReporte(input: GenerarReporteInput): Promise<FilaRe
   const res = await fn(input);
   return res.data.filas;
 }
+export async function generarReporteMensual(input: GenerarReporteMensualInput): Promise<FilaReporteMensual[]> {
+  const fn = httpsCallable<GenerarReporteMensualInput, { filas: FilaReporteMensual[] }>(functions, "generarReporteMensualFn");
+  const res = await fn(input);
+  return res.data.filas;
+}
 export async function actualizarTipoCofre(input: ActualizarTipoCofreInput): Promise<TipoCofre> {
   const fn = httpsCallable<ActualizarTipoCofreInput, { cofre: TipoCofre }>(functions, "actualizarTipoCofreFn");
   const res = await fn(input);
@@ -205,6 +233,11 @@ export async function registrarPago(input: RegistrarPagoInput): Promise<Pago> {
   const fn = httpsCallable<RegistrarPagoInput, { pago: Pago }>(functions, "registrarPagoFn");
   const res = await fn(input);
   return res.data.pago;
+}
+export async function actualizarTipoPago(input: ActualizarTipoPagoInput): Promise<Servicio> {
+  const fn = httpsCallable<ActualizarTipoPagoInput, { servicio: Servicio }>(functions, "actualizarTipoPagoFn");
+  const res = await fn(input);
+  return res.data.servicio;
 }
 
 export async function listarPagosPorAfiliado(afiliadoId: string): Promise<Pago[]> {

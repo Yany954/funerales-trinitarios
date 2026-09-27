@@ -48,4 +48,10 @@ export class ConveniosRepositoryFirestore implements ConveniosRepository {
     const data = doc.data()!;
     return { id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as Convenio;
   }
+  async obtenerTarifa(convenioId: string, anio: string): Promise<TarifaConvenio | null> {
+    const doc = await db.collection(CONVENIOS).doc(convenioId).collection(TARIFAS).doc(anio).get();
+    if (!doc.exists) return null;
+    const data = doc.data()!;
+    return { ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as TarifaConvenio;
+  }
 }

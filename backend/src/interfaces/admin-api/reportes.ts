@@ -3,6 +3,7 @@ import { requireAuth } from "../../infrastructure/auth/rbac";
 import { ServiciosRepositoryFirestore } from "../../infrastructure/firebase/servicio.repository.firestore";
 import { ConveniosRepositoryFirestore } from "../../infrastructure/firebase/convenio.repository.firestore";
 import { generarReporte, GenerarReporteInput } from "../../application/reportes/generarReporte.usecase";
+import { generarReporteMensual, GenerarReporteMensualInput } from "../../application/reportes/generarReporteMensual.usecase";
 
 const serviciosRepo = new ServiciosRepositoryFirestore();
 const conveniosRepo = new ConveniosRepositoryFirestore();
@@ -15,5 +16,14 @@ export const generarReporteFn = onCall<GenerarReporteInput>(async (request) => {
     }
   }
   const filas = await generarReporte(serviciosRepo, conveniosRepo, request.data);
+  return { filas };
+});
+
+export const generarReporteMensualFn = onCall<GenerarReporteMensualInput>(async (request) => {
+  requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    throw new HttpsError("permission-denied", "Solo un administrador puede generar reportes.");
+  }
+  const filas = await generarReporteMensual(serviciosRepo, conveniosRepo, request.data);
   return { filas };
 });

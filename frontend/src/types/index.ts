@@ -5,6 +5,17 @@ export interface Beneficiario {
   nombre: string;
   parentesco: string;
   cedula: string;
+  fechaAdicion?: unknown;
+  fallecido?: boolean;
+  fechaFallecimiento?: unknown;
+  certificadoDefuncionURL?: string;
+}
+
+export interface RegistrarFallecimientoBeneficiarioInput {
+  afiliadoId: string;
+  cedulaBeneficiario: string;
+  fechaFallecimiento: string;
+  certificadoDefuncionURL: string;
 }
 
 export interface Afiliado {
@@ -17,8 +28,21 @@ export interface Afiliado {
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
   sede: Sede;
+  anioAfiliacion: number;
+  valorCuotaMensual: number;
 }
-export interface ActualizarAfiliadoInput { id: string; nombreCompleto?: string; cedula?: string; numeroContrato?: string; planId?: string; tieneSeguroVida?: boolean; aseguradora?: string; observaciones?: string; }
+export interface ActualizarAfiliadoInput { 
+  id: string; 
+  nombreCompleto?: string; 
+  cedula?: string; 
+  numeroContrato?: string; 
+  planId?: string; 
+  tieneSeguroVida?: boolean; 
+  aseguradora?: string; 
+  observaciones?: string; 
+  anioAfiliacion: number;
+  valorCuotaMensual: number; }
+
 export interface ResultadoBusquedaAfiliado {
   persona: PersonaCubierta;
   afiliado: Afiliado;
@@ -28,13 +52,18 @@ export interface CrearAfiliadoInput {
   nombreCompleto: string;
   cedula: string;
   numeroContrato: string;
+  sede: Sede;
   planId: string;
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
   aseguradora?: string;
   observaciones?: string;
+  anioAfiliacion: number;
 }
-export interface ActualizarBeneficiariosInput { afiliadoId: string; beneficiarios: Beneficiario[]; }
+export interface ActualizarBeneficiariosInput { 
+  afiliadoId: string; 
+  beneficiarios: Beneficiario[];
+ }
 
 export interface PersonaCubierta {
   id: string;
@@ -69,12 +98,24 @@ export interface Boveda {
 
 export interface RegistrarBovedaInput {
   servicioId?: string;
-  zona: string;
-  fechaInicio: string; // tal como lo da un <input type="date">
-  valorArriendo: number;
+  zona?: string;
+  fechaInicio: string;
+  valorArriendo?: number;
   incluyeExhumacion: boolean;
   sede: Sede;
+  itemBovedaId?: string;
 }
+export interface ItemBoveda { id: string; nombre: string; zona: string; precio: number; }
+export interface CrearItemBovedaInput { nombre: string; zona: string; precio: number; }
+export interface ActualizarItemBovedaInput { id: string; nombre?: string; zona?: string; precio?: number; }
+
+export const VEREDAS_POR_MUNICIPIO: Record<string, string[]> = {
+  Pailitas: ["Casco urbano", "Chiriguaná Viejo", "La Aurora", "San Roque"],
+  Curumaní: ["Casco urbano", "Rincón Hondo", "Poponte", "Saloa"],
+  Chiriguaná: ["Casco urbano", "La Sierra", "Estación Sur"],
+  Pelaya: ["Casco urbano", "La Gloria", "Palmira"],
+  Tamalameque: ["Casco urbano", "Saloa", "Mata de Palma"],
+};
 export interface ItemServicio {
   concepto: string;
   cantidad: number;
@@ -105,6 +146,7 @@ export interface Servicio {
   comprobantePagoURL?: string;
   esAfiliado: boolean;
   cedulaTitular?: string;
+  tipoPago?: TipoPago;
 }
 export interface ServicioResumen {
   id: string;
@@ -130,6 +172,7 @@ export interface RegistrarServicioInput {
   observaciones?: string;
   esAfiliado: boolean;
   cedulaTitular?: string;
+  valorBoveda?: number;
 }
 export type TipoConvenio = "empresa_exequial" | "alcaldia" | "interno";
 
@@ -151,6 +194,7 @@ export interface TarifaConvenio {
   trasladoLocal: number;
   trasladoFluvial: number;
 }
+export interface DuplicarTarifaInput { convenioId: string; anioOrigen: string; anioDestino: string; }
 
 export interface CrearConvenioInput {
   nombre: string;
@@ -222,6 +266,7 @@ export interface ActualizarServicioInput {
   observaciones?: string;
   esAfiliado: boolean;
   cedulaTitular?: string;
+  valorBoveda?: number;
 }
 export interface Pago {
   id: string;
@@ -241,6 +286,9 @@ export interface RegistrarPagoInput {
   periodoCubierto: string;
   comprobanteURL: string;
 }
+export type TipoPago = "pendiente" | "convenio_alcaldia" | "afiliado";
+export interface ActualizarTipoPagoInput { servicioId: string; tipoPago: TipoPago; }
+
 export interface UsuarioListado { uid: string; email: string; nombre: string; rol: "admin" | "empleado"; sede: string; deshabilitado: boolean; }
 export interface CrearUsuarioInput { nombre: string; email: string; rol: "admin" | "empleado"; sede: string; }
 
@@ -250,4 +298,24 @@ export interface CambiarEstadoFacturacionInput {
   nuevoEstado: "facturado" | "pagado";
   facturaURL?: string;
   comprobantePagoURL?: string;
+}
+export type FiltroReporteMensual = "todos" | "convenioPendienteFacturar" | "facturado" | "facturadoAlcaldia";
+
+export interface FilaReporteMensual {
+  id: string;
+  fecha: string;
+  sede: string;
+  convenio: string;
+  fallecido: string;
+  servicioPrestado: string;
+  boveda: boolean;
+  valorTotal: number;
+  estadoFacturacion: string;
+}
+
+export interface GenerarReporteMensualInput {
+  sede?: string;
+  filtro: FiltroReporteMensual;
+  fechaInicio: string;
+  fechaFin: string;
 }

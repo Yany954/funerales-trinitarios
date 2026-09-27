@@ -56,6 +56,12 @@
     { "fieldPath": "sede", "order": "ASCENDING" },
     { "fieldPath": "fechaLimite", "order": "ASCENDING" }
   ]
+},{
+  "collectionGroup": "servicios",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "fechaServicio", "order": "ASCENDING" }
+  ]
 },
     {
   "collectionGroup": "pagos",

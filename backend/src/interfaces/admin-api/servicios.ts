@@ -9,10 +9,13 @@ import { cambiarEstadoFacturacion, CambiarEstadoFacturacionInput } from "../../a
 import { ConveniosRepositoryFirestore } from "../../infrastructure/firebase/convenio.repository.firestore";
 import { eliminarServicio } from "../../application/servicios/eliminarServicio.usecase";
 import { listarServiciosPorCedulaTitular } from "../../application/servicios/listarServiciosPorCedulaTitular.usecase";
+import { ItemBovedaRepositoryFirestore } from "../../infrastructure/firebase/item-boveda.repository.firestore";
+import { actualizarTipoPago, ActualizarTipoPagoInput } from "../../application/servicios/actualizarTipodePago.usecase";
 
 const conveniosRepo = new ConveniosRepositoryFirestore();
 const repo = new ServiciosRepositoryFirestore();
 const bovedaRepo = new BovedaRepositoryFirestore();
+const itemBovedaRepo = new ItemBovedaRepositoryFirestore();
 
 export const registrarServicioFn = onCall<RegistrarServicioInput>(async (request) => {
   const uid = requireAuth(request);
@@ -65,4 +68,13 @@ export const listarServiciosPorAfiliadoFn = onCall<{ cedula: string }>(async (re
   requireAuth(request);
   const servicios = await listarServiciosPorCedulaTitular(repo, request.data.cedula);
   return { servicios: servicios.map((s) => ({ ...s, fechaServicio: s.fechaServicio.toISOString() })) };
+});
+
+export const actualizarTipoPagoFn = onCall<ActualizarTipoPagoInput>(async (request) => {
+  const uid = requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    throw new HttpsError("permission-denied", "Solo un administrador puede cambiar el tipo de pago.");
+  }
+  const servicio = await actualizarTipoPago(repo, request.data, metadataHumano(uid));
+  return { servicio };
 });

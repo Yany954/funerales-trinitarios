@@ -8,6 +8,7 @@ import { formatoPesos } from "../utils/formato";
 import { confirmarEliminar } from "../utils/confirmar";
 import type { Flor } from "../types";
 import CampoPrecio from "../components/CampoPrecio";
+import ImagenAmpliable from "../components/ImagenAmpliable";
 
 export default function Flores() {
   const [flores, setFlores] = useState<Flor[]>([]);
@@ -111,9 +112,7 @@ export default function Flores() {
         columnas={[
           {
             encabezado: "Foto",
-            render: (f: Flor) => f.fotoURL
-              ? <img src={f.fotoURL} alt="" className="h-10 w-10 rounded-md object-cover" />
-              : <div className="h-10 w-10 rounded-md bg-vino-50" />,
+            render: (c: Flor) => <ImagenAmpliable src={c.fotoURL} />,
           },
           { encabezado: "Nombre", render: (f: Flor) => f.nombre },
           { encabezado: "Costo", render: (f: Flor) => formatoPesos(f.precioCosto) },

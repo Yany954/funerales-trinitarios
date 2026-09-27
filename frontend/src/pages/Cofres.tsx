@@ -8,6 +8,7 @@ import { confirmarEliminar } from "../utils/confirmar";
 import type { TipoCofre, CategoriaCofre } from "../types";
 import { formatoPesos, formatoTamano } from "../utils/formato";
 import CampoPrecio from "../components/CampoPrecio";
+import ImagenAmpliable from "../components/ImagenAmpliable";
 
 const ETIQUETA_NIVEL: Record<NonNullable<TipoCofre["nivel"]>, string> = { basico: "Básico", semilujo: "Semilujo", lujo: "Lujo" };
 const ETIQUETA_CATEGORIA: Record<CategoriaCofre, string> = { estandar: "Estándar", ancho: "Ancho (talla grande)", infantil: "Infantil" };
@@ -89,9 +90,7 @@ export default function Cofres() {
   const columnasComunes = [
     {
       encabezado: "Foto",
-      render: (c: TipoCofre) => c.fotoURL
-        ? <img src={c.fotoURL} alt="" className="h-10 w-10 rounded-md object-cover" />
-        : <div className="h-10 w-10 rounded-md bg-vino-50" />,
+      render: (c: TipoCofre) => <ImagenAmpliable src={c.fotoURL} />,
     },
     { encabezado: "Referencia", render: (c: TipoCofre) => c.referencia },
     { encabezado: "Precio", render: (c: TipoCofre) => formatoPesos(c.precio) },

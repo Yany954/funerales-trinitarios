@@ -13,5 +13,8 @@ export async function actualizarInventario(
   input: ActualizarInventarioInput,
   metadata: MetadataCambio
 ): Promise<InventarioCofre> {
+  if (!input.sede) {
+  throw new Error("La sede es obligatoria.");
+}
   return repo.actualizarCantidad(input.sede, input.tipoCofreId, input.cantidadDisponible, metadata);
 }

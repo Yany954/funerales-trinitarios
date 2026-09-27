@@ -75,13 +75,20 @@ export class ServiciosRepositoryFirestore implements ServiciosRepository {
   async eliminar(id: string): Promise<void> {
     await db.collection(SERVICIOS).doc(id).delete();
   }
-  
-  async buscarPorCedulaTitular(cedula: string): Promise<Servicio[]> {
-  const snap = await db.collection(SERVICIOS)
-    .where("cedulaTitular", "==", cedula)
-    .orderBy("fechaServicio", "desc")
-    .get();
-  return snap.docs.map((d) => deFirestore(d.id, d.data()));
-}
 
+  async buscarPorCedulaTitular(cedula: string): Promise<Servicio[]> {
+    const snap = await db.collection(SERVICIOS)
+      .where("cedulaTitular", "==", cedula)
+      .orderBy("fechaServicio", "desc")
+      .get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
+  async buscarPorRangoFechas(desde: Date, hasta: Date, sede?: string): Promise<Servicio[]> {
+    let q: FirebaseFirestore.Query = db.collection(SERVICIOS)
+      .where("fechaServicio", ">=", Timestamp.fromDate(desde))
+      .where("fechaServicio", "<=", Timestamp.fromDate(hasta));
+    if (sede) q = q.where("sede", "==", sede);
+    const snap = await q.get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
 }

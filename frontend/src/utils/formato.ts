@@ -7,9 +7,11 @@ export function formatoTamano(cm: number | undefined | null): string {
   const metros = cm / 100;
   return `${metros % 1 === 0 ? metros.toFixed(0) : metros.toFixed(2)} m`;
 }
-export function formatoFecha(valor: string | number | Date | undefined | null): string {
+export function formatoFecha(valor: unknown): string {
   if (!valor) return "Fecha no disponible";
-  const fecha = new Date(valor);
+  const fecha = (valor as { toDate?: () => Date }).toDate
+    ? (valor as { toDate: () => Date }).toDate()
+    : new Date(valor as string | number | Date);
   if (isNaN(fecha.getTime())) return "Fecha no disponible";
   return fecha.toLocaleDateString("es-CO");
 }
