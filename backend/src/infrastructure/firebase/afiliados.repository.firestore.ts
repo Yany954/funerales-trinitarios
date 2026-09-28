@@ -3,7 +3,7 @@ import { Afiliado, PersonaCubierta } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { Beneficiario } from "../../domain/entities/afiliado";
-
+import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
 
@@ -38,13 +38,14 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
     metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
   } as Afiliado;
 }
-
 function convertirBeneficiario(b: any): Beneficiario {
+  const aFecha = (v: any) => (v?.toDate ? v.toDate() : v);
   return {
     ...b,
-    fechaNacimiento: b.fechaNacimiento?.toDate ? b.fechaNacimiento.toDate() : b.fechaNacimiento, // ← nuevo
-    fechaAdicion: b.fechaAdicion?.toDate ? b.fechaAdicion.toDate() : b.fechaAdicion,
-    fechaFallecimiento: b.fechaFallecimiento?.toDate ? b.fechaFallecimiento.toDate() : b.fechaFallecimiento,
+    fechaNacimiento: aFecha(b.fechaNacimiento),
+    fechaAdicion: aFecha(b.fechaAdicion),
+    fechaFallecimiento: aFecha(b.fechaFallecimiento),
+    novedades: b.novedades?.map((n: any) => ({ ...n, fecha: aFecha(n.fecha) })),
   };
 }
 
@@ -78,10 +79,11 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     const existentes = await db.collection(PERSONAS_CUBIERTAS)
       .where("afiliadoId", "==", afiliado.id)
       .where("esTitular", "==", false)
-      .get();
+      .get(); 
     existentes.docs.forEach((d) => batch.delete(d.ref));
 
     afiliado.beneficiarios.forEach((beneficiario, i) => {
+      if (estaRetirado(beneficiario)) return; // los retirados/inactivos ya no figuran como cubiertos en la búsqueda
       const ref = db.collection(PERSONAS_CUBIERTAS).doc(`beneficiario_${afiliado.id}_${i}`);
       batch.set(ref, {
         nombreCompleto: beneficiario.nombre,

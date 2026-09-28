@@ -10,5 +10,13 @@ function anioDe(valor: unknown): number | undefined {
 }
 
 export function contarBeneficiariosQueOcupanCupo(beneficiarios: Beneficiario[], anioReferencia: number): number {
-  return beneficiarios.filter((b) => !b.fallecido || anioDe(b.fechaFallecimiento) === anioReferencia).length;
+  return beneficiarios.filter((b) => {
+  if (estaRetirado(b)) return false;
+  return !b.fallecido || anioDe(b.fechaFallecimiento) === anioReferencia;
+}).length;
 }
+export function estaRetirado(b: Beneficiario): boolean {
+  const ultima = b.novedades?.[b.novedades.length - 1];
+  return ultima?.tipo === "retiro";
+}
+

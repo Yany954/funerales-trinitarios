@@ -1,56 +1,102 @@
 import { useEffect, useState, FormEvent } from "react";
-import { X, Receipt } from "lucide-react";
-import { listarPagosPorAfiliado, registrarPago } from "../api/client";
+import { X, Receipt, Pencil, Trash2 } from "lucide-react";
+import { listarPagosPorAfiliado, registrarPago, actualizarPago, eliminarPago } from "../api/client";
 import SubirFoto from "./SubirFoto";
+import CampoPrecio from "./CampoPrecio";
+import { useRol } from "../auth/RolContext";
+import { confirmarEliminar } from "../utils/confirmar";
+import { formatoFecha, formatoPesos, formatoPeriodo, desglosarPeriodo, MESES } from "../utils/formato";
 import type { Afiliado, Pago } from "../types";
-import { formatoPesos, formatoFecha } from "../utils/formato";
 
 interface Props {
   afiliado: Afiliado;
   onCerrar: () => void;
 }
 
+function aInputDate(valor: unknown): string {
+  const fecha = new Date(valor as string);
+  return isNaN(fecha.getTime()) ? "" : fecha.toISOString().slice(0, 10);
+}
+
 export default function PanelPagos({ afiliado, onCerrar }: Props) {
+  const { rol } = useRol();
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [editando, setEditando] = useState<Pago | null>(null);
+  const [version, setVersion] = useState(0); // fuerza un formulario limpio tras guardar
   const [comprobanteURL, setComprobanteURL] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    listarPagosPorAfiliado(afiliado.id)
-      .then(setPagos)
-      .catch((err) => console.error("Error cargando pagos:", err))
-      .finally(() => setCargando(false));
-  }, [afiliado.id]);
-
-  async function manejarRegistrar(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!comprobanteURL) {
-      setError("Sube la foto del comprobante antes de guardar.");
-      return;
+  async function cargar() {
+    try {
+      setPagos(await listarPagosPorAfiliado(afiliado.id));
+    } catch (err) {
+      console.error("Error cargando pagos:", err);
+    } finally {
+      setCargando(false);
     }
+  }
+
+  useEffect(() => {
+    cargar();
+  }, [afiliado.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function empezarEdicion(p: Pago) {
+    setEditando(p);
+    setComprobanteURL(p.comprobanteURL ?? "");
+    setError(null);
+  }
+
+  function limpiarFormulario() {
+    setEditando(null);
+    setComprobanteURL("");
+    setVersion((v) => v + 1);
+  }
+
+  async function manejarGuardar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError(null);
     setGuardando(true);
     const form = new FormData(e.currentTarget);
+    const datos = {
+      fecha: String(form.get("fecha")),
+      valor: Number(form.get("valor")),
+      periodoCubierto: `${form.get("anio")}-${String(form.get("mes")).padStart(2, "0")}`,
+      comprobanteURL: comprobanteURL || undefined,
+      numeroRecibo: String(form.get("numeroRecibo") || "") || undefined,
+    };
     try {
-      const nuevo = await registrarPago({
-        afiliadoId: afiliado.id,
-        sede: afiliado.sede,
-        fecha: String(form.get("fecha")),
-        valor: Number(form.get("valor")),
-        periodoCubierto: String(form.get("periodoCubierto")),
-        comprobanteURL,
-      });
-      setPagos((prev) => [nuevo, ...prev]);
-      setComprobanteURL("");
-      (e.target as HTMLFormElement).reset();
+      if (editando) {
+        await actualizarPago({ id: editando.id, ...datos });
+      } else {
+        await registrarPago({ afiliadoId: afiliado.id, sede: afiliado.sede, ...datos });
+      }
+      limpiarFormulario();
+      await cargar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo registrar el pago.");
+      setError(err instanceof Error ? err.message : "No se pudo guardar el pago.");
     } finally {
       setGuardando(false);
     }
   }
+
+  async function manejarEliminar(p: Pago) {
+    const confirmado = await confirmarEliminar(`el pago de ${formatoPeriodo(p.periodoCubierto)}`);
+    if (!confirmado) return;
+    try {
+      await eliminarPago(p.id);
+      if (editando?.id === p.id) limpiarFormulario();
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo eliminar el pago.");
+    }
+  }
+
+  const hoy = new Date();
+  const { mes, anio } = editando
+    ? desglosarPeriodo(editando.periodoCubierto, editando.fecha)
+    : { mes: hoy.getMonth() + 1, anio: hoy.getFullYear() };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
@@ -65,19 +111,46 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
           </button>
         </div>
 
-        <form onSubmit={manejarRegistrar} className="space-y-3 rounded-xl border border-vino-100 p-4">
-          <p className="text-sm font-medium text-vino-900">Nuevo pago del mes</p>
+        <form key={editando?.id ?? `nuevo-${version}`} onSubmit={manejarGuardar} className="space-y-3 rounded-xl border border-vino-100 p-4">
+          <p className="text-sm font-medium text-vino-900">{editando ? "Editando pago" : "Nuevo pago"}</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="fecha" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="periodoCubierto" required placeholder="Periodo (ej. 2026-09)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="valor" type="number" required placeholder="Valor pagado" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
+            <div>
+              <label className="mb-1 block text-xs text-tinta/50">Fecha en que pagó</label>
+              <input name="fecha" type="date" required defaultValue={editando ? aInputDate(editando.fecha) : ""} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-tinta/50">Mes que cubre el pago</label>
+              <div className="flex gap-2">
+                <select name="mes" defaultValue={mes} className="flex-1 rounded-lg border border-vino-100 px-2 py-2 text-sm">
+                  {MESES.map((n, idx) => (
+                    <option key={n} value={idx + 1}>{n}</option>
+                  ))}
+                </select>
+                <input name="anio" type="number" required defaultValue={anio} className="w-20 rounded-lg border border-vino-100 px-2 py-2 text-sm" />
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <CampoPrecio name="valor" required placeholder="Valor pagado" valorInicial={editando?.valor ?? afiliado.valorCuotaMensual} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-tinta/50">N° de recibo (opcional)</label>
+              <input name="numeroRecibo" defaultValue={editando?.numeroRecibo} placeholder="Ej. 1023" className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            </div>
           </div>
-          <SubirFoto carpeta={`pagos/${afiliado.sede}/${afiliado.id}`} onSubido={setComprobanteURL} />
+          <div className="space-y-1">
+            <p className="text-xs text-tinta/50">Comprobante (opcional)</p>
+            <SubirFoto carpeta={`pagos/${afiliado.sede}/${afiliado.id}`} valorActual={editando?.comprobanteURL} onSubido={setComprobanteURL} />
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" disabled={guardando} className="flex items-center gap-2 rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
-            <Receipt size={16} />
-            {guardando ? "Guardando…" : "Guardar pago"}
-          </button>
+          <div className="flex gap-2">
+            <button type="submit" disabled={guardando} className="flex items-center gap-2 rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
+              <Receipt size={16} />
+              {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar pago"}
+            </button>
+            {editando && (
+              <button type="button" onClick={limpiarFormulario} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/60">Cancelar</button>
+            )}
+          </div>
         </form>
 
         <div className="mt-4 space-y-2">
@@ -89,9 +162,22 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
           ) : (
             <ul className="divide-y divide-vino-50">
               {pagos.map((p) => (
-                <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>{formatoFecha(p.fecha)} — {p.periodoCubierto} — {formatoPesos(p.valor)}</span>
-                  <a href={p.comprobanteURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver comprobante</a>
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                  <div>
+                    <p className="font-medium text-vino-900">{formatoPeriodo(p.periodoCubierto)} — {formatoPesos(p.valor)}</p>
+                    <p className="text-xs text-tinta/50">
+                      Pagado el {formatoFecha(p.fecha)}{p.numeroRecibo ? ` — recibo N° ${p.numeroRecibo}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {p.comprobanteURL && (
+                      <a href={p.comprobanteURL} target="_blank" rel="noreferrer" className="rounded-lg px-2 py-1.5 text-xs text-vino-700 hover:bg-vino-50">Ver comprobante</a>
+                    )}
+                    <button onClick={() => empezarEdicion(p)} className="rounded-lg p-2 text-vino-700 hover:bg-vino-50"><Pencil size={16} /></button>
+                    {rol === "admin" && (
+                      <button onClick={() => manejarEliminar(p)} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,38 +1,34 @@
-import { AfiliadosRepository } from "../ports/afiliados.repository";
+import { Pago } from "../../domain/entities/pago";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
+import { estadoSegunMora, periodoMasReciente } from "../../domain/value-objects/mora";
+import { AfiliadosRepository } from "../ports/afiliados.repository";
+import { PagosRepository } from "../ports/pagos.repository";
 
-/**
- * La cuota vence exactamente un mes después de la fecha base (fecha de
- * afiliación, o la fecha del último pago si ya pagó alguna vez) — mismo
- * día del mes siguiente. Se da 1 día de gracia después de esa fecha; pasado
- * ese día sin pago, el afiliado queda "en mora".
- */
-function calcularFechaVencimiento(fechaBase: Date): Date {
-  const vencimiento = new Date(fechaBase);
-  vencimiento.setMonth(vencimiento.getMonth() + 1);
-  return vencimiento;
-}
+export async function actualizarEstadosMora(
+  afiliadosRepo: AfiliadosRepository,
+  pagosRepo: PagosRepository,
+  metadata: MetadataCambio
+): Promise<number> {
+  const [afiliados, pagos] = await Promise.all([afiliadosRepo.listarTodos(), pagosRepo.listarTodos()]);
 
-function estaEnMora(fechaBase: Date, hoy: Date): boolean {
-  const vencimiento = calcularFechaVencimiento(fechaBase);
-  const limiteConGracia = new Date(vencimiento);
-  limiteConGracia.setDate(limiteConGracia.getDate() + 1);
-  return hoy.getTime() > limiteConGracia.getTime();
-}
+  const pagosPorAfiliado = new Map<string, Pago[]>();
+  for (const p of pagos) {
+    const lista = pagosPorAfiliado.get(p.afiliadoId) ?? [];
+    lista.push(p);
+    pagosPorAfiliado.set(p.afiliadoId, lista);
+  }
 
-export async function actualizarEstadosMora(repo: AfiliadosRepository, metadata: MetadataCambio): Promise<number> {
-  const afiliados = await repo.listarTodos();
   const hoy = new Date();
   let actualizados = 0;
 
   for (const afiliado of afiliados) {
-    if (afiliado.estadoPlan === "inactivo") continue; // no tocar a quien se dio de baja voluntariamente
+    if (afiliado.estadoPlan === "inactivo" || !afiliado.fechaAfiliacionReal) continue;
 
-    const fechaBase = afiliado.ultimoPago?.fecha ?? afiliado.fechaAfiliacionReal;
-    const nuevoEstado = estaEnMora(fechaBase, hoy) ? "en mora" : "activo";
+    const hasta = periodoMasReciente(pagosPorAfiliado.get(afiliado.id) ?? []);
+    const nuevoEstado = estadoSegunMora(afiliado.fechaAfiliacionReal, hasta, hoy);
 
     if (afiliado.estadoPlan !== nuevoEstado) {
-      await repo.actualizarEstadoPlan(afiliado.id, nuevoEstado, metadata);
+      await afiliadosRepo.actualizarEstadoPlan(afiliado.id, nuevoEstado, metadata);
       actualizados++;
     }
   }

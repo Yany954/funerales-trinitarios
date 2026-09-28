@@ -8,14 +8,12 @@ import { actualizarBeneficiarios, ActualizarBeneficiariosInput } from "../../app
 import { actualizarAfiliado, ActualizarAfiliadoInput } from "../../application/afiliados/actualizarAfiliados.usecase";
 import { eliminarAfiliado } from "../../application/afiliados/eliminarAfiliado.usecase";
 import { registrarFallecimientoBeneficiario, RegistrarFallecimientoBeneficiarioInput } from "../../application/afiliados/registrarFallecimientoBeneficiario.usecase";
+import { CallableRequest } from "firebase-functions/v2/https";
+import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
+import { registrarNovedadBeneficiario, deshacerNovedadBeneficiario, RegistrarNovedadInput, DeshacerNovedadInput } from "../../application/afiliados/novedadesBeneficiario.usecase";
+
 const repo = new AfiliadosRepositoryFirestore();
-function aFechaSerializable(valor: unknown): unknown {
-  if (!valor) return valor;
-  const conToDate = valor as { toDate?: () => Date };
-  if (conToDate.toDate) return conToDate.toDate().toISOString();
-  if (valor instanceof Date) return valor.toISOString();
-  return valor;
-}
+
 /** El dashboard llama esto para crear un afiliado nuevo. */
 export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   const uid = requireAuth(request);
@@ -69,22 +67,70 @@ export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
   return { ok: true };
 });
 
-export const registrarFallecimientoBeneficiarioFn = onCall<RegistrarFallecimientoBeneficiarioInput>(async (request) => {
+
+
+function iso(valor: unknown): string | undefined {
+  if (!valor) return undefined;
+  const conToDate = valor as { toDate?: () => Date };
+  const fecha = conToDate.toDate ? conToDate.toDate() : (valor as Date);
+  return fecha instanceof Date && !isNaN(fecha.getTime()) ? fecha.toISOString() : undefined;
+}
+
+function serializarBeneficiario(b: Beneficiario) {
+  return {
+    ...b,
+    fechaNacimiento: iso(b.fechaNacimiento),
+    fechaAdicion: iso(b.fechaAdicion),
+    fechaFallecimiento: iso(b.fechaFallecimiento),
+    novedades: b.novedades?.map((n) => ({ ...n, fecha: iso(n.fecha) })),
+  };
+}
+
+function serializarAfiliado(a: Afiliado) {
+  return {
+    ...a,
+    metadata: undefined,
+    fechaAfiliacion: iso(a.fechaAfiliacion),
+    fechaAfiliacionReal: iso(a.fechaAfiliacionReal),
+    fechaNacimiento: iso(a.fechaNacimiento),
+    ultimoPago: a.ultimoPago ? { ...a.ultimoPago, fecha: iso(a.ultimoPago.fecha) } : null,
+    beneficiarios: a.beneficiarios.map(serializarBeneficiario),
+  };
+}
+
+async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Promise<string> {
   const uid = requireAuth(request);
   const afiliado = await repo.obtenerPorId(request.data.afiliadoId);
   if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
   if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
   }
-  const actualizado = await registrarFallecimientoBeneficiario(repo, request.data, metadataHumano(uid));
-  return {
-    afiliado: {
-      ...actualizado,
-      beneficiarios: actualizado.beneficiarios.map((b) => ({
-        ...b,
-        fechaAdicion: aFechaSerializable(b.fechaAdicion),
-        fechaFallecimiento: aFechaSerializable(b.fechaFallecimiento),
-      })),
-    },
-  };
+  return uid;
+}
+
+async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
+  try {
+    return await accion();
+  } catch (err) {
+    console.error(err);
+    throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "No se pudo completar la acción.");
+  }
+}
+
+export const registrarFallecimientoBeneficiarioFn = onCall<RegistrarFallecimientoBeneficiarioInput>(async (request) => {
+  const uid = await autorizar(request);
+  const afiliado = await ejecutar(() => registrarFallecimientoBeneficiario(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(afiliado) };
+});
+
+export const registrarNovedadBeneficiarioFn = onCall<RegistrarNovedadInput>(async (request) => {
+  const uid = await autorizar(request);
+  const afiliado = await ejecutar(() => registrarNovedadBeneficiario(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(afiliado) };
+});
+
+export const deshacerNovedadBeneficiarioFn = onCall<DeshacerNovedadInput>(async (request) => {
+  const uid = await autorizar(request);
+  const afiliado = await ejecutar(() => deshacerNovedadBeneficiario(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(afiliado) };
 });

@@ -26,3 +26,20 @@ export function calcularEdad(fechaNacimiento: unknown): number | null {
   if (diferenciaMeses < 0 || (diferenciaMeses === 0 && hoy.getDate() < fecha.getDate())) edad--;
   return edad;
 }
+export const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+/** "2026-08" → "Agosto 2026". Los datos viejos en texto libre se muestran tal cual. */
+export function formatoPeriodo(periodo: string): string {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(periodo);
+  return m ? `${MESES[Number(m[2]) - 1]} ${m[1]}` : periodo;
+}
+
+/** Saca mes y año de un período nuevo ("2026-08") o de uno viejo en texto ("AGOSTO"). */
+export function desglosarPeriodo(periodo: string, fechaPago: unknown): { mes: number; anio: number } {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(periodo);
+  if (m) return { anio: Number(m[1]), mes: Number(m[2]) };
+  const norm = periodo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const idx = MESES.findIndex((n) => norm.includes(n.toLowerCase()));
+  const f = new Date(fechaPago as string);
+  return { anio: f.getFullYear(), mes: idx >= 0 ? idx + 1 : f.getMonth() + 1 };
+}

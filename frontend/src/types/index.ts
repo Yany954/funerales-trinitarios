@@ -34,6 +34,7 @@ export interface Beneficiario {
   fallecido?: boolean;
   fechaFallecimiento?: unknown;
   certificadoDefuncionURL?: string;
+  novedades?: { tipo: "ingreso" | "retiro"; fecha: unknown; motivo?: string }[];
 }
 
 /** Beneficiario tal como se ENVÍA desde un formulario — sin campos que solo maneja el backend. */
@@ -96,11 +97,22 @@ export interface ActualizarBeneficiariosInput {
   beneficiarios: BeneficiarioEntrada[];
 }
 
-export interface RegistrarFallecimientoBeneficiarioInput {
+export interface IdentificadorBeneficiario {
   afiliadoId: string;
   cedulaBeneficiario: string;
+  nombreBeneficiario?: string;
+}
+export interface RegistrarFallecimientoBeneficiarioInput extends IdentificadorBeneficiario {
   fechaFallecimiento: string;
   certificadoDefuncionURL: string;
+}
+export interface RegistrarNovedadBeneficiarioInput extends IdentificadorBeneficiario {
+  tipo: "ingreso" | "retiro";
+  fecha: string;
+  motivo?: string;
+}
+export interface DeshacerNovedadBeneficiarioInput extends IdentificadorBeneficiario {
+  quitar: "fallecimiento" | "novedad";
 }
 
 export interface PersonaCubierta {
@@ -444,7 +456,8 @@ export interface Pago {
   fecha: string;
   valor: number;
   periodoCubierto: string;
-  comprobanteURL: string;
+  comprobanteURL?: string;
+  numeroRecibo?: string;
 }
 
 export interface RegistrarPagoInput {
@@ -453,7 +466,16 @@ export interface RegistrarPagoInput {
   fecha: string;
   valor: number;
   periodoCubierto: string;
-  comprobanteURL: string;
+  comprobanteURL?: string;
+  numeroRecibo?: string;
+}
+export interface ActualizarPagoInput {
+  id: string;
+  fecha?: string;
+  valor?: number;
+  periodoCubierto?: string;
+  comprobanteURL?: string;
+  numeroRecibo?: string;
 }
 
 // ============================================================

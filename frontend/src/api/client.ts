@@ -30,6 +30,7 @@ import type { CambiarEstadoFacturacionInput } from "../types";
 import type { ActualizarBeneficiariosInput,RegistrarFallecimientoBeneficiarioInput } from "../types";
 import type { ResultadoBusquedaAfiliado } from "../types";
 import type { ActualizarAfiliadoInput } from "../types";
+import type { RegistrarNovedadBeneficiarioInput, DeshacerNovedadBeneficiarioInput, ActualizarPagoInput } from "../types";
 
 
 const runningLocally =
@@ -298,4 +299,24 @@ export async function cambiarEstadoFacturacion(input: CambiarEstadoFacturacionIn
   const fn = httpsCallable<CambiarEstadoFacturacionInput, { servicio: Servicio }>(functions, "cambiarEstadoFacturacionFn");
   const res = await fn(input);
   return res.data.servicio;
+}
+
+export async function registrarNovedadBeneficiario(input: RegistrarNovedadBeneficiarioInput): Promise<Afiliado> {
+  const fn = httpsCallable<RegistrarNovedadBeneficiarioInput, { afiliado: Afiliado }>(functions, "registrarNovedadBeneficiarioFn");
+  return (await fn(input)).data.afiliado;
+}
+
+export async function deshacerNovedadBeneficiario(input: DeshacerNovedadBeneficiarioInput): Promise<Afiliado> {
+  const fn = httpsCallable<DeshacerNovedadBeneficiarioInput, { afiliado: Afiliado }>(functions, "deshacerNovedadBeneficiarioFn");
+  return (await fn(input)).data.afiliado;
+}
+
+export async function actualizarPago(input: ActualizarPagoInput): Promise<Pago> {
+  const fn = httpsCallable<ActualizarPagoInput, { pago: Pago }>(functions, "actualizarPagoFn");
+  return (await fn(input)).data.pago;
+}
+
+export async function eliminarPago(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarPagoFn");
+  await fn({ id });
 }

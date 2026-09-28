@@ -27,6 +27,7 @@ export interface Afiliado {
   tieneSeguroVida: boolean;
   aseguradora?: string;
   observaciones?: string;
+  periodoCubiertoHasta?: string | null;
   metadata: MetadataCambio;
 }
 
@@ -44,7 +45,7 @@ export interface BeneficiarioEntrada {
   nombre: string;
   parentesco: string;
   cedula: string;
-  fechaNacimiento?: string; 
+  fechaNacimiento?: string;
 }
 export interface Beneficiario {
   nombre: string;
@@ -54,5 +55,12 @@ export interface Beneficiario {
   fallecido?: boolean;
   fechaFallecimiento?: Date;
   fechaNacimiento?: Date;
+  novedades?: NovedadBeneficiario[];
   certificadoDefuncionURL?: string;
+}
+
+export interface NovedadBeneficiario {
+  tipo: "ingreso" | "retiro";
+  fecha: Date;
+  motivo?: string;
 }

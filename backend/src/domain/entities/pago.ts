@@ -7,6 +7,7 @@ export interface Pago {
   fecha: Date;
   valor: number;
   periodoCubierto: string;
-  comprobanteURL: string;
+  comprobanteURL?: string;
+  numeroRecibo?: string;
   metadata: MetadataCambio;
 }

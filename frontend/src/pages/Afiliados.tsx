@@ -39,6 +39,7 @@ export default function Afiliados() {
   const [afiliadoEditando, setAfiliadoEditando] = useState<Afiliado | null>(null);
   const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
   const [sedeForm, setSedeForm] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<"todos" | Afiliado["estadoPlan"]>("todos");
 
   useEffect(() => {
     return onSnapshot(
@@ -68,7 +69,19 @@ export default function Afiliados() {
   }, [sedeSeleccionada]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+const conteo = {
+  activo: afiliados.filter((a) => a.estadoPlan === "activo").length,
+  "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
+  inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
+};
+const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
+const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
+  { valor: "todos", etiqueta: "Todos" },
+  { valor: "activo", etiqueta: "Activos" },
+  { valor: "en mora", etiqueta: "En mora" },
+  { valor: "inactivo", etiqueta: "Inactivos" },
+];
   async function manejarBusqueda(e: FormEvent) {
     e.preventDefault();
     if (!termino.trim()) {
@@ -108,7 +121,7 @@ export default function Afiliados() {
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
         fechaNacimiento: String(form.get("fechaNacimiento")),
         vereda: String(form.get("vereda") || "") || undefined,
-        beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim() && b.cedula.trim()),
+        beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim()),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
       setMostrarFormulario(false);
@@ -191,12 +204,32 @@ export default function Afiliados() {
           Nuevo afiliado
         </button>
       </div>
+      <div className="grid grid-cols-3 gap-3">
+  {(["activo", "en mora", "inactivo"] as const).map((estado) => (
+    <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
+      <p className="text-xs capitalize text-tinta/50">{estado}</p>
+      <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
+    </div>
+  ))}
+</div>
+
+<div className="flex flex-wrap gap-2">
+  {PESTAÑAS_ESTADO.map((p) => (
+    <button
+      key={p.valor}
+      onClick={() => setFiltroEstado(p.valor)}
+      className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/60"}`}
+    >
+      {p.etiqueta}
+    </button>
+  ))}
+</div>
 
       {mostrarFormulario && (
         <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <input name="nombreCompleto" required placeholder="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="cedula" required placeholder="Cédula" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="cedula" required placeholder="Cédula (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <select name="planId" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Plan…</option>
               {planes.map((p) => (
@@ -341,10 +374,10 @@ export default function Afiliados() {
             ),
           },
         ]}
-        filas={afiliados}
+        filas={afiliadosFiltrados}
         cargando={cargando}
         claveFila={(a) => a.id}
-        vacioTitulo="Todavía no hay afiliados registrados"
+        vacioTitulo="No hay afiliados con este estado"
         vacioDescripcion='Usa "Nuevo afiliado" para agregar el primero.'
       />
       {afiliadoServicios && <PanelHistorialServicios afiliado={afiliadoServicios} onCerrar={() => setAfiliadoServicios(null)} />}
