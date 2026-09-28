@@ -16,6 +16,7 @@ import { confirmarEliminar } from "../utils/confirmar";
 import PanelHistorialServicios from "../components/PanelHistorialServicios";
 import CampoPrecio from "../components/CampoPrecio";
 import { VEREDAS_POR_MUNICIPIO } from "../types";
+import { PARENTESCOS } from "../utils/parentescos";
 
 
 export default function Afiliados() {
@@ -166,14 +167,14 @@ export default function Afiliados() {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-tinta/70 sm:grid-cols-3">
-  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
-  <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
-  <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
-  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
-  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
-  <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
-  <p>Nacimiento: <span className="text-tinta">{formatoFecha(afiliado.fechaNacimiento)} ({calcularEdad(afiliado.fechaNacimiento) ?? "—"} años)</span></p>
-</div>
+                  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
+                  <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
+                  <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
+                  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
+                  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
+                  <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
+                  <p>Nacimiento: <span className="text-tinta">{formatoFecha(afiliado.fechaNacimiento)} ({calcularEdad(afiliado.fechaNacimiento) ?? "—"} años)</span></p>
+                </div>
               </div>
             ))
           )}
@@ -209,7 +210,7 @@ export default function Afiliados() {
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
             />
             <label className="block text-xs text-tinta/50 sm:col-span-2">Fecha de nacimiento (titular)</label>
-<input name="fechaNacimiento" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="fechaNacimiento" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <CampoPrecio name="valorCuotaMensual" required placeholder="Cuota mensual que paga" />
             <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
@@ -249,14 +250,17 @@ export default function Afiliados() {
             <p className="text-sm font-medium text-vino-900">Beneficiarios (opcional)</p>
             {beneficiariosNuevo.map((b, i) => (
               <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-vino-50 p-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem] sm:border-0 sm:p-0">
-  <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-  <input placeholder="Parentesco" value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-  <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-  <input type="date" value={b.fechaNacimiento ?? ""} onChange={(e) => actualizarBeneficiarioNuevo(i, "fechaNacimiento", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-  <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
-    <Trash2 size={16} className="mx-auto" />
-  </button>
-</div>
+                <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <select value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm">
+                  <option value="">Parentesco…</option>
+                  {PARENTESCOS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <input type="date" value={b.fechaNacimiento ?? ""} onChange={(e) => actualizarBeneficiarioNuevo(i, "fechaNacimiento", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
+                  <Trash2 size={16} className="mx-auto" />
+                </button>
+              </div>
             ))}
             <button
               type="button"

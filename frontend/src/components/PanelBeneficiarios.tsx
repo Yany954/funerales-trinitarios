@@ -5,6 +5,7 @@ import SubirDocumento from "./SubirDocumento";
 import { formatoFecha, calcularEdad } from "../utils/formato";
 import { contarBeneficiariosQueOcupanCupo, LIMITE_BENEFICIARIOS_POR_ANIO } from "../utils/cupoBeneficiarios";
 import type { Afiliado, Beneficiario } from "../types";
+import { PARENTESCOS } from "../utils/parentescos";
 
 interface Props {
   afiliado: Afiliado;
@@ -49,7 +50,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
           nombre: b.nombre,
           parentesco: b.parentesco,
           cedula: b.cedula,
-          fechaNacimiento: (b.fechaNacimiento as string) || undefined,
+          fechaNacimiento: aInputDate(b.fechaNacimiento) || undefined,
         }));
       await actualizarBeneficiarios({ afiliadoId: afiliado.id, beneficiarios: validos });
       onCerrar();
@@ -111,7 +112,13 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
               {/* En celular se apila en una sola columna; desde sm hacia arriba, en fila */}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem]">
                 <input placeholder="Nombre" value={b.nombre} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "nombre", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
-                <input placeholder="Parentesco" value={b.parentesco} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                <select value={b.parentesco} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50">
+                  <option value="">Parentesco…</option>
+                  {PARENTESCOS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {b.parentesco && !(PARENTESCOS as readonly string[]).includes(b.parentesco) && (
+                    <option value={b.parentesco}>{b.parentesco}</option>
+                  )}
+                </select>
                 <input placeholder="Cédula" value={b.cedula} disabled={b.fallecido} onChange={(e) => actualizarFila(i, "cedula", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
                 <input
                   type="date"

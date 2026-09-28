@@ -39,10 +39,10 @@ export default function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-vino-100 bg-white">
+    <div className="overflow-x-auto rounded-xl border border-vino-100 bg-white">
       {/* Vista de tabla — md y más grande */}
-      <table className="hidden w-full text-left text-sm md:table">
-        <thead className="bg-vino-50 text-vino-900">
+      <table className="hidden w-full min-w-max text-left text-sm md:table">
+         <thead className="bg-vino-50 text-vino-900">
           <tr>
             {columnas.map((c) => (
               <th key={c.encabezado} className="px-4 py-3 font-medium">

@@ -40,8 +40,13 @@ export const actualizarBeneficiariosFn = onCall<ActualizarBeneficiariosInput>(as
   if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
   }
-  const actualizado = await actualizarBeneficiarios(repo, request.data, metadataHumano(uid));
-  return { afiliado: actualizado };
+  try {
+    const actualizado = await actualizarBeneficiarios(repo, request.data, metadataHumano(uid));
+    return { afiliado: actualizado };
+  } catch (err) {
+    console.error("actualizarBeneficiariosFn falló:", err);
+    throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "No se pudo guardar.");
+  }
 });
 
 export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (request) => {

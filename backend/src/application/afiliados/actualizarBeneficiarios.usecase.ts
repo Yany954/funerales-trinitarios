@@ -7,7 +7,14 @@ export interface ActualizarBeneficiariosInput {
   afiliadoId: string;
   beneficiarios: BeneficiarioEntrada[];
 }
-
+function parsearFecha(valor: string | undefined): Date | undefined {
+  if (!valor) return undefined;
+  const fecha = new Date(valor);
+  if (isNaN(fecha.getTime())) {
+    throw new Error(`Fecha de nacimiento inválida: "${valor}". Usa el formato aaaa-mm-dd.`);
+  }
+  return fecha;
+}
 export async function actualizarBeneficiarios(
   repo: AfiliadosRepository,
   input: ActualizarBeneficiariosInput,
@@ -22,7 +29,7 @@ export async function actualizarBeneficiarios(
 const beneficiariosNuevos: Beneficiario[] = input.beneficiarios.map((entrada) => {
   const existente = existentesPorCedula.get(entrada.cedula);
   const fechaNacimiento = entrada.fechaNacimiento
-    ? new Date(entrada.fechaNacimiento)
+    ? parsearFecha(entrada.fechaNacimiento)
     : existente?.fechaNacimiento;
 
   if (existente) {

@@ -13,7 +13,7 @@ export function formatoFecha(valor: unknown): string {
     ? (valor as { toDate: () => Date }).toDate()
     : new Date(valor as string | number | Date);
   if (isNaN(fecha.getTime())) return "Fecha no disponible";
-  return fecha.toLocaleDateString("es-CO");
+  return fecha.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 export function calcularEdad(fechaNacimiento: unknown): number | null {
   if (!fechaNacimiento) return null;
