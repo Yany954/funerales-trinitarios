@@ -13,7 +13,7 @@ export function formatoFecha(valor: unknown): string {
     ? (valor as { toDate: () => Date }).toDate()
     : new Date(valor as string | number | Date);
   if (isNaN(fecha.getTime())) return "Fecha no disponible";
-  return fecha.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return fecha.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 }
 export function calcularEdad(fechaNacimiento: unknown): number | null {
   if (!fechaNacimiento) return null;
@@ -21,9 +21,9 @@ export function calcularEdad(fechaNacimiento: unknown): number | null {
   const fecha = conToDate?.toDate ? conToDate.toDate() : new Date(fechaNacimiento as string);
   if (isNaN(fecha.getTime())) return null;
   const hoy = new Date();
-  let edad = hoy.getFullYear() - fecha.getFullYear();
-  const diferenciaMeses = hoy.getMonth() - fecha.getMonth();
-  if (diferenciaMeses < 0 || (diferenciaMeses === 0 && hoy.getDate() < fecha.getDate())) edad--;
+  let edad = hoy.getUTCFullYear() - fecha.getUTCFullYear();
+  const diferenciaMeses = hoy.getUTCMonth() - fecha.getUTCMonth();
+  if (diferenciaMeses < 0 || (diferenciaMeses === 0 && hoy.getUTCDate() < fecha.getUTCDate())) edad--;
   return edad;
 }
 export const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];

@@ -18,7 +18,7 @@ function itemVacio(): ItemServicio {
 }
 
 function aFecha(valor: unknown): string {
-  if (valor instanceof Timestamp) return valor.toDate().toLocaleDateString("es-CO");
+  if (valor instanceof Timestamp) return valor.toDate().toLocaleDateString("es-CO", { timeZone: "UTC" });
   return "—";
 }
 

@@ -36,6 +36,7 @@ export interface PersonaCubierta {
   id: string;
   nombreCompleto: string;
   nombreBusqueda: string;
+  palabrasNombre: string[];
   cedula: string;
   esTitular: boolean;
   parentesco?: string;

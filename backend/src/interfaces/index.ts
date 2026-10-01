@@ -1,5 +1,5 @@
 export { actualizarInventarioFn } from "./admin-api/inventario";
-export { crearAfiliadoFn, buscarPersonaCubiertaFn, actualizarBeneficiariosFn, actualizarAfiliadoFn, eliminarAfiliadoFn, registrarFallecimientoBeneficiarioFn,registrarNovedadBeneficiarioFn, deshacerNovedadBeneficiarioFn } from "./admin-api/afiliados";
+export { crearAfiliadoFn, actualizarAfiliadoFn, eliminarAfiliadoFn, buscarPersonaCubiertaFn, actualizarBeneficiariosFn, registrarFallecimientoBeneficiarioFn, registrarNovedadBeneficiarioFn, deshacerNovedadBeneficiarioFn, reindexarPersonasCubiertasFn } from "./admin-api/afiliados";
 export { actualizarEstadosBovedasFn } from "./scheduled/actualizar-estados-bovedas";
 export { crearItemBovedaFn, actualizarItemBovedaFn, eliminarItemBovedaFn } from "./admin-api/item-boveda";
 export { registrarServicioFn, actualizarServicioFn, cambiarEstadoFacturacionFn, eliminarServicioFn, listarServiciosPorAfiliadoFn, actualizarTipoPagoFn } from "./admin-api/servicios";

@@ -36,11 +36,17 @@ export async function actualizarPago(
     if (input.valor <= 0) throw new Error("Ingresa el valor pagado.");
     cambios.valor = input.valor;
   }
-  if (input.periodoCubierto) {
-    const clave = claveDePeriodo(input.periodoCubierto, fechaFinal);
-    if (!clave) throw new Error("Elige el mes que cubre este pago.");
-    cambios.periodoCubierto = clave;
+if (input.periodoCubierto) {
+  const clave = claveDePeriodo(input.periodoCubierto, fechaFinal);
+  if (!clave) throw new Error("Elige el mes que cubre este pago.");
+
+  const otros = await pagosRepo.listarPorAfiliado(actual.afiliadoId);
+  const yaExiste = otros.some((p) => p.id !== actual.id && claveDePeriodo(p.periodoCubierto, p.fecha) === clave);
+  if (yaExiste) {
+    throw new Error(`Ya existe otro pago que cubre ese mes.`);
   }
+  cambios.periodoCubierto = clave;
+}
   if (input.comprobanteURL !== undefined) cambios.comprobanteURL = input.comprobanteURL;
   if (input.numeroRecibo !== undefined) cambios.numeroRecibo = (input.numeroRecibo ?? "").trim() || undefined;
   const actualizado = await pagosRepo.actualizar(input.id, cambios);

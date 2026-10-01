@@ -3,7 +3,7 @@ import { collection, onSnapshot, orderBy, query, where } from "firebase/firestor
 import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
-import type { Afiliado, BeneficiarioEntrada, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
+import type { Afiliado, BeneficiarioEntrada, PersonaCubierta, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
 import { useRol } from "../auth/RolContext";
 import PanelPagos from "../components/PanelPagos";
 import { Receipt } from "lucide-react";
@@ -18,7 +18,7 @@ import CampoPrecio from "../components/CampoPrecio";
 import { VEREDAS_POR_MUNICIPIO } from "../types";
 import { PARENTESCOS } from "../utils/parentescos";
 
-
+import { reindexarPersonasCubiertas } from "../api/client";
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -69,19 +69,19 @@ export default function Afiliados() {
   }, [sedeSeleccionada]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
-const conteo = {
-  activo: afiliados.filter((a) => a.estadoPlan === "activo").length,
-  "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
-  inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
-};
-const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
+  const conteo = {
+    activo: afiliados.filter((a) => a.estadoPlan === "activo").length,
+    "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
+    inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
+  };
+  const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
-const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
-  { valor: "todos", etiqueta: "Todos" },
-  { valor: "activo", etiqueta: "Activos" },
-  { valor: "en mora", etiqueta: "En mora" },
-  { valor: "inactivo", etiqueta: "Inactivos" },
-];
+  const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
+    { valor: "todos", etiqueta: "Todos" },
+    { valor: "activo", etiqueta: "Activos" },
+    { valor: "en mora", etiqueta: "En mora" },
+    { valor: "inactivo", etiqueta: "Inactivos" },
+  ];
   async function manejarBusqueda(e: FormEvent) {
     e.preventDefault();
     if (!termino.trim()) {
@@ -140,7 +140,11 @@ const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: str
       return copia;
     });
   }
-
+  function beneficiarioDe(afiliado: Afiliado, persona: PersonaCubierta) {
+    return afiliado.beneficiarios?.find((b) =>
+      persona.cedula ? b.cedula === persona.cedula : b.nombre === persona.nombreCompleto
+    );
+  }
   return (
     <div className="space-y-6">
       {/* Búsqueda rápida: "¿esta persona tiene plan?" — por titular o beneficiario */}
@@ -160,6 +164,15 @@ const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: str
         >
           Buscar
         </button>
+        <button
+          onClick={async () => {
+            const { total } = await reindexarPersonasCubiertas();
+            alert(`Listo: ${total} afiliados reindexados`);
+          }}
+          className="rounded-lg border border-vino-100 px-3 py-2 text-xs text-tinta/60"
+        >
+          Reindexar (temporal)
+        </button>
       </form>
 
       {buscando && <p className="text-sm text-tinta/50">Buscando…</p>}
@@ -174,19 +187,26 @@ const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: str
             resultadosBusqueda.map(({ persona, afiliado }) => (
               <div key={persona.id} className="rounded-xl border border-vino-100 bg-white p-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="font-display text-base text-vino-900">{afiliado.nombreCompleto}</p>
+                  <p className="font-display text-base text-vino-900">{persona.nombreCompleto}</p>
                   <span className="rounded-full bg-vino-50 px-2.5 py-1 text-xs text-vino-700">
                     {persona.esTitular ? "Titular" : `Encontrado como beneficiario (${persona.parentesco})`}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-tinta/70 sm:grid-cols-3">
-                  <p>Cédula titular: <span className="text-tinta">{afiliado.cedula}</span></p>
+                  <p>Cédula: <span className="text-tinta">{persona.cedula || "—"}</span></p>
+                  {!persona.esTitular && (
+                    <p>Nacimiento: <span className="text-tinta">{formatoFecha(beneficiarioDe(afiliado, persona)?.fechaNacimiento)} ({calcularEdad(beneficiarioDe(afiliado, persona)?.fechaNacimiento) ?? "—"} años)</span></p>
+                  )}
                   <p>Plan: <span className="text-tinta">{mapaPlanes[afiliado.planId] ?? afiliado.planId}</span></p>
                   <p>N° Contrato: <span className="text-tinta">{afiliado.numeroContrato}</span></p>
-                  <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
-                  <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
                   <p>Sede: <span className="text-tinta">{afiliado.sede}</span></p>
-                  <p>Nacimiento: <span className="text-tinta">{formatoFecha(afiliado.fechaNacimiento)} ({calcularEdad(afiliado.fechaNacimiento) ?? "—"} años)</span></p>
+                  {persona.esTitular && (
+                    <>
+                      <p>Estado: <span className="text-tinta">{afiliado.estadoPlan}</span></p>
+                      <p>Beneficiarios: <span className="text-tinta">{afiliado.beneficiarios?.length ?? 0}</span></p>
+                      <p>Nacimiento: <span className="text-tinta">{formatoFecha(afiliado.fechaNacimiento)} ({calcularEdad(afiliado.fechaNacimiento) ?? "—"} años)</span></p>
+                    </>
+                  )}
                 </div>
               </div>
             ))
@@ -205,25 +225,25 @@ const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: str
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-  {(["activo", "en mora", "inactivo"] as const).map((estado) => (
-    <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
-      <p className="text-xs capitalize text-tinta/50">{estado}</p>
-      <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
-    </div>
-  ))}
-</div>
+        {(["activo", "en mora", "inactivo"] as const).map((estado) => (
+          <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
+            <p className="text-xs capitalize text-tinta/50">{estado}</p>
+            <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
+          </div>
+        ))}
+      </div>
 
-<div className="flex flex-wrap gap-2">
-  {PESTAÑAS_ESTADO.map((p) => (
-    <button
-      key={p.valor}
-      onClick={() => setFiltroEstado(p.valor)}
-      className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/60"}`}
-    >
-      {p.etiqueta}
-    </button>
-  ))}
-</div>
+      <div className="flex flex-wrap gap-2">
+        {PESTAÑAS_ESTADO.map((p) => (
+          <button
+            key={p.valor}
+            onClick={() => setFiltroEstado(p.valor)}
+            className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/60"}`}
+          >
+            {p.etiqueta}
+          </button>
+        ))}
+      </div>
 
       {mostrarFormulario && (
         <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">

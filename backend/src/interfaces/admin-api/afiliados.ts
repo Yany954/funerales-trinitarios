@@ -1,73 +1,25 @@
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { requireAuth } from "../../infrastructure/auth/rbac";
 import { AfiliadosRepositoryFirestore } from "../../infrastructure/firebase/afiliados.repository.firestore";
+import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
+import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
+
 import { crearAfiliado, CrearAfiliadoInput } from "../../application/afiliados/crear-afiliado.usecase";
 import { buscarPersonaCubierta } from "../../application/afiliados/buscar-persona-cubierta.usecase";
-import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
-import { actualizarBeneficiarios, ActualizarBeneficiariosInput } from "../../application/afiliados/actualizarBeneficiarios.usecase";
-import { actualizarAfiliado, ActualizarAfiliadoInput } from "../../application/afiliados/actualizarAfiliados.usecase";
+import { actualizarAfiliado, ActualizarAfiliadoInput } from "../../application/afiliados/actualizarAfiliado.usecase";
 import { eliminarAfiliado } from "../../application/afiliados/eliminarAfiliado.usecase";
+import { actualizarBeneficiarios, ActualizarBeneficiariosInput } from "../../application/afiliados/actualizarBeneficiarios.usecase";
 import { registrarFallecimientoBeneficiario, RegistrarFallecimientoBeneficiarioInput } from "../../application/afiliados/registrarFallecimientoBeneficiario.usecase";
-import { CallableRequest } from "firebase-functions/v2/https";
-import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
-import { registrarNovedadBeneficiario, deshacerNovedadBeneficiario, RegistrarNovedadInput, DeshacerNovedadInput } from "../../application/afiliados/novedadesBeneficiario.usecase";
+import {
+  registrarNovedadBeneficiario,
+  deshacerNovedadBeneficiario,
+  RegistrarNovedadInput,
+  DeshacerNovedadInput,
+} from "../../application/afiliados/novedadesBeneficiario.usecase";
 
 const repo = new AfiliadosRepositoryFirestore();
 
-/** El dashboard llama esto para crear un afiliado nuevo. */
-export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
-  const uid = requireAuth(request);
-  if (request.auth?.token.rol !== "admin" && request.data.sede !== request.auth?.token.sede) {
-    throw new HttpsError("permission-denied", "No puedes crear afiliados fuera de tu sede.");
-  }
-  const afiliado = await crearAfiliado(repo, request.data, metadataHumano(uid));
-  return { afiliado };
-});
-
-/** El dashboard (y en el futuro el bot de WhatsApp) llama esto para saber si alguien tiene plan. */
-export const buscarPersonaCubiertaFn = onCall<{ termino: string }>(async (request) => {
-  requireAuth(request);
-  const resultados = await buscarPersonaCubierta(repo, request.data.termino);
-  return { resultados };
-});
-
-export const actualizarBeneficiariosFn = onCall<ActualizarBeneficiariosInput>(async (request) => {
-  const uid = requireAuth(request);
-  const afiliado = await repo.obtenerPorId(request.data.afiliadoId);
-  if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
-  if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
-    throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
-  }
-  try {
-    const actualizado = await actualizarBeneficiarios(repo, request.data, metadataHumano(uid));
-    return { afiliado: actualizado };
-  } catch (err) {
-    console.error("actualizarBeneficiariosFn falló:", err);
-    throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "No se pudo guardar.");
-  }
-});
-
-export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (request) => {
-  const uid = requireAuth(request);
-  const afiliado = await repo.obtenerPorId(request.data.id);
-  if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
-  if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
-    throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
-  }
-  const actualizado = await actualizarAfiliado(repo, request.data, metadataHumano(uid));
-  return { afiliado: actualizado };
-});
-
-export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
-  requireAuth(request);
-  if (request.auth?.token.rol !== "admin") {
-    throw new HttpsError("permission-denied", "Solo un administrador puede eliminar afiliados.");
-  }
-  await eliminarAfiliado(repo, request.data.id);
-  return { ok: true };
-});
-
-
+// ---------- Helpers de serialización (nunca mandar un Date/Timestamp crudo por la red) ----------
 
 function iso(valor: unknown): string | undefined {
   if (!valor) return undefined;
@@ -98,6 +50,9 @@ function serializarAfiliado(a: Afiliado) {
   };
 }
 
+// ---------- Helpers de autorización / manejo de errores ----------
+
+/** Para funciones cuyo input trae afiliadoId — verifica sesión y que la sede coincida (o sea admin). */
 async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Promise<string> {
   const uid = requireAuth(request);
   const afiliado = await repo.obtenerPorId(request.data.afiliadoId);
@@ -108,6 +63,7 @@ async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Prom
   return uid;
 }
 
+/** Convierte cualquier Error lanzado por un caso de uso en un HttpsError legible para el cliente. */
 async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
   try {
     return await accion();
@@ -116,6 +72,53 @@ async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
     throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "No se pudo completar la acción.");
   }
 }
+
+// ---------- Funciones expuestas al frontend ----------
+
+/** El dashboard llama esto para crear un afiliado nuevo. */
+export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
+  const uid = requireAuth(request);
+  const afiliado = await ejecutar(() => crearAfiliado(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(afiliado) };
+});
+
+/** El dashboard (y en el futuro el bot de WhatsApp) llama esto para saber si alguien tiene plan. */
+export const buscarPersonaCubiertaFn = onCall<{ termino: string }>(async (request) => {
+  requireAuth(request);
+  const resultados = await buscarPersonaCubierta(repo, request.data.termino);
+  return {
+    resultados: resultados.map((r) => ({
+      ...r,
+      afiliado: serializarAfiliado(r.afiliado),
+    })),
+  };
+});
+
+export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (request) => {
+  const uid = requireAuth(request);
+  const afiliado = await repo.obtenerPorId(request.data.id);
+  if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
+  if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
+    throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
+  }
+  const actualizado = await ejecutar(() => actualizarAfiliado(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(actualizado) };
+});
+
+export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
+  requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    throw new HttpsError("permission-denied", "Solo un administrador puede eliminar afiliados.");
+  }
+  await ejecutar(() => eliminarAfiliado(repo, request.data.id));
+  return { ok: true };
+});
+
+export const actualizarBeneficiariosFn = onCall<ActualizarBeneficiariosInput>(async (request) => {
+  const uid = await autorizar(request);
+  const actualizado = await ejecutar(() => actualizarBeneficiarios(repo, request.data, metadataHumano(uid)));
+  return { afiliado: serializarAfiliado(actualizado) };
+});
 
 export const registrarFallecimientoBeneficiarioFn = onCall<RegistrarFallecimientoBeneficiarioInput>(async (request) => {
   const uid = await autorizar(request);
@@ -133,4 +136,17 @@ export const deshacerNovedadBeneficiarioFn = onCall<DeshacerNovedadInput>(async 
   const uid = await autorizar(request);
   const afiliado = await ejecutar(() => deshacerNovedadBeneficiario(repo, request.data, metadataHumano(uid)));
   return { afiliado: serializarAfiliado(afiliado) };
+});
+
+// ---------- TEMPORAL: borrar después de correrla una vez (ver mensaje sobre reindexar búsqueda) ----------
+export const reindexarPersonasCubiertasFn = onCall(async (request) => {
+  requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    throw new HttpsError("permission-denied", "Solo un administrador puede hacer esto.");
+  }
+  const afiliados = await repo.listarTodos();
+  for (const a of afiliados) {
+    await repo.sincronizarPersonasCubiertas(a);
+  }
+  return { ok: true, total: afiliados.length };
 });

@@ -11,7 +11,7 @@ export interface RegistrarPagoInput {
   fecha: string;
   valor: number;
   periodoCubierto: string;
-  comprobanteURL?: string; 
+  comprobanteURL?: string;
   numeroRecibo?: string;
 }
 
@@ -26,6 +26,12 @@ export async function registrarPago(
   if (!input.valor || input.valor <= 0) throw new Error("Ingresa el valor pagado.");
   const periodo = claveDePeriodo(input.periodoCubierto, fecha);
   if (!periodo) throw new Error("Elige el mes que cubre este pago.");
+
+  const existentes = await pagosRepo.listarPorAfiliado(input.afiliadoId);
+  const yaExiste = existentes.some((p) => claveDePeriodo(p.periodoCubierto, p.fecha) === periodo);
+  if (yaExiste) {
+    throw new Error(`Ya existe un pago que cubre ese mes. Edita el pago existente en vez de crear uno nuevo.`);
+  }
 
   const pago = await pagosRepo.crear({
     afiliadoId: input.afiliadoId,

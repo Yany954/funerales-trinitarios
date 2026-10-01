@@ -7,7 +7,7 @@ import { useRol } from "../auth/RolContext";
 import { confirmarEliminar } from "../utils/confirmar";
 import { formatoFecha, formatoPesos, formatoPeriodo, desglosarPeriodo, MESES } from "../utils/formato";
 import type { Afiliado, Pago } from "../types";
-
+import Swal from "sweetalert2";
 interface Props {
   afiliado: Afiliado;
   onCerrar: () => void;
@@ -66,6 +66,19 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
       comprobanteURL: comprobanteURL || undefined,
       numeroRecibo: String(form.get("numeroRecibo") || "") || undefined,
     };
+    const yaExiste = pagos.some(
+      (p) => p.id !== editando?.id && p.periodoCubierto === datos.periodoCubierto
+    );
+    if (yaExiste) {
+      Swal.fire({
+        title: "Mes ya cubierto",
+        text: `Ya existe un pago que cubre ${formatoPeriodo(datos.periodoCubierto)}. Edita ese pago en vez de crear uno nuevo.`,
+        icon: "warning",
+        confirmButtonColor: "#5E2138",
+      });
+      setGuardando(false);
+      return;
+    }
     try {
       if (editando) {
         await actualizarPago({ id: editando.id, ...datos });
