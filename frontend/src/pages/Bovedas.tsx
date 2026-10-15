@@ -11,7 +11,7 @@ import { Copy, Check } from "lucide-react";
 import CampoPrecio from "../components/CampoPrecio";
   import { crearItemBoveda, actualizarItemBoveda, eliminarItemBoveda } from "../api/client";
 import { confirmarEliminar } from "../utils/confirmar";
-import { VEREDAS_POR_MUNICIPIO } from "../types";
+import { UBICACIONES_POR_SEDE } from "../types";
 import type { ItemBoveda } from "../types";
 const SEDES: Sede[] = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"];
 
@@ -208,10 +208,10 @@ async function manejarEliminarItem(item: ItemBoveda) {
   onChange={(e) => setMunicipioForm(e.target.value)}
   className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
 >
-  {Object.keys(VEREDAS_POR_MUNICIPIO).map((m) => <option key={m} value={m}>{m}</option>)}
+  {Object.keys(UBICACIONES_POR_SEDE).map((m) => <option key={m} value={m}>{m}</option>)}
 </select>
 <select name="zona" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
-  {VEREDAS_POR_MUNICIPIO[municipioForm].map((v) => <option key={v} value={`${municipioForm} - ${v}`}>{v}</option>)}
+  {UBICACIONES_POR_SEDE[municipioForm].map((v) => <option key={v} value={`${municipioForm} - ${v}`}>{v}</option>)}
 </select>
 
 <select

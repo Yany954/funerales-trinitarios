@@ -3,7 +3,7 @@ import { X, Save } from "lucide-react";
 import { actualizarAfiliado } from "../api/client";
 import CampoPrecio from "./CampoPrecio";
 import type { Afiliado, PlanFunerario } from "../types";
-import { VEREDAS_POR_MUNICIPIO } from "../types";
+import { UBICACIONES_POR_SEDE } from "../types";
 interface Props {
   afiliado: Afiliado;
   planes: PlanFunerario[];
@@ -19,7 +19,7 @@ function aInputDate(valor: unknown): string {
 export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [veredaSeleccionada, setVeredaSeleccionada] = useState(afiliado.vereda ?? "");
+  const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState(afiliado.ubicacion ?? afiliado.vereda ?? "");
 
   async function manejarGuardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,7 +33,7 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
         cedula: String(form.get("cedula")),
         numeroContrato: String(form.get("numeroContrato")),
         planId: String(form.get("planId")),
-        vereda: String(form.get("vereda") || "") || undefined,
+        ubicacion: String(form.get("ubicacion") || ""), // "" = la misma sede
         fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
         fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
@@ -61,9 +61,9 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
           <select name="planId" required defaultValue={afiliado.planId} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm">
             {planes.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
-          <select name="vereda" value={veredaSeleccionada} onChange={(e) => setVeredaSeleccionada(e.target.value)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm">
-            <option value="">Vereda (opcional)…</option>
-            {(VEREDAS_POR_MUNICIPIO[afiliado.sede] ?? []).map((v) => (
+          <select name="ubicacion" value={ubicacionSeleccionada} onChange={(e) => setUbicacionSeleccionada(e.target.value)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm">
+            <option value="">Ubicación: {afiliado.sede} (por defecto)</option>
+            {(UBICACIONES_POR_SEDE[afiliado.sede] ?? []).map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>

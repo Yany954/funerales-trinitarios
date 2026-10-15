@@ -7,12 +7,35 @@
 
 export type Sede = "Pailitas" | "Tamalameque" | "Pelaya" | "Curumaní";
 
-export const VEREDAS_POR_MUNICIPIO: Record<string, string[]> = {
+/**
+ * Ubicaciones (veredas, corregimientos u otros municipios) que atiende cada sede.
+ * Si un afiliado no tiene ubicación elegida, se entiende que es la misma sede.
+ */
+export const UBICACIONES_POR_SEDE: Record<string, string[]> = {
   Pailitas: ["Las Vegas", "Palestina", "Floresta"],
   Curumaní: ["Sabana Grande", "San Roque"],
-  Pelaya: ["Floresta", "Costilla", "San Bernardo", "Ayacucho", "Simaña", "La Sabana", "Pueblo Nuevo", "Mundo al revés","Las Palmas","Los Naranjos"],
+  Pelaya: [
+    "Floresta",
+    "Costilla",
+    "San Bernardo",
+    "Ayacucho",
+    "Simaña",
+    "La Sabana",
+    "Pueblo Nuevo",
+    "Mundo al revés",
+    "Las Palmas",
+    "Los Naranjos",
+    "La Gloria",
+    "La Mata",
+    "Simaña",
+  ],
   Tamalameque: ["Antequera", "Brisas", "Pasacorriendo"],
 };
+
+/** Ubicación que se muestra: la elegida, la vereda de registros viejos, o la sede por defecto. */
+export function ubicacionDe(a: { ubicacion?: string; vereda?: string; sede: string }): string {
+  return a.ubicacion || a.vereda || a.sede;
+}
 
 export interface NavItem {
   label: string;
@@ -53,6 +76,8 @@ export interface Afiliado {
   cedula: string;
   numeroContrato: string;
   sede: Sede;
+  ubicacion?: string;
+  /** @deprecated nombre viejo de `ubicacion`; solo se lee en registros antiguos. */
   vereda?: string;
   planId: string;
   fechaNacimiento?: unknown;
@@ -68,7 +93,7 @@ export interface CrearAfiliadoInput {
   cedula: string;
   numeroContrato: string;
   sede: Sede;
-  vereda?: string;
+  ubicacion?: string;
   planId: string;
   fechaNacimiento?: string;
   fechaAfiliacionReal: string;
@@ -91,7 +116,7 @@ export interface ActualizarAfiliadoInput {
   tieneSeguroVida?: boolean;
   aseguradora?: string;
   observaciones?: string;
-  vereda?: string;
+  ubicacion?: string;
 }
 
 export interface ActualizarBeneficiariosInput {

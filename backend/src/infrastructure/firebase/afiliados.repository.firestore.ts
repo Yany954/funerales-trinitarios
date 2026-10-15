@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { db, Timestamp } from "./admin";
 import { Afiliado, Beneficiario, PersonaCubierta } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
@@ -52,6 +53,7 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
   return {
     id,
     ...data,
+    ubicacion: data.ubicacion ?? data.vereda, // registros viejos usaban "vereda"
     fechaAfiliacion: data.fechaAfiliacion.toDate(),
     fechaAfiliacionReal: data.fechaAfiliacionReal?.toDate ? data.fechaAfiliacionReal.toDate() : data.fechaAfiliacionReal,
     fechaNacimiento: data.fechaNacimiento?.toDate ? data.fechaNacimiento.toDate() : data.fechaNacimiento,
@@ -109,6 +111,7 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     if (cambios.fechaAfiliacion) datos.fechaAfiliacion = Timestamp.fromDate(cambios.fechaAfiliacion);
     if (cambios.fechaAfiliacionReal) datos.fechaAfiliacionReal = Timestamp.fromDate(cambios.fechaAfiliacionReal);
     if (cambios.fechaNacimiento) datos.fechaNacimiento = Timestamp.fromDate(cambios.fechaNacimiento);
+    if ("ubicacion" in cambios) datos.vereda = FieldValue.delete(); // migra el nombre viejo del campo
     if (cambios.ultimoPago) datos.ultimoPago = { ...cambios.ultimoPago, fecha: Timestamp.fromDate(cambios.ultimoPago.fecha) };
     await db.collection(AFILIADOS).doc(id).update(datos);
     const doc = await db.collection(AFILIADOS).doc(id).get();

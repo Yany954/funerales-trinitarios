@@ -16,7 +16,7 @@ export interface CrearAfiliadoInput {
   sede: Sede;
   planId: string;
   fechaAfiliacionReal: string;
-  vereda?: string;
+  ubicacion?: string;
   fechaNacimiento?: string;
   valorCuotaMensual: number;
   beneficiarios: BeneficiarioEntrada[];
@@ -69,7 +69,7 @@ export async function crearAfiliado(
     tieneSeguroVida: input.tieneSeguroVida,
     aseguradora: input.aseguradora,
     observaciones: input.observaciones,
-    vereda: input.vereda,
+    ubicacion: input.ubicacion || undefined,
     metadata,
   };
 

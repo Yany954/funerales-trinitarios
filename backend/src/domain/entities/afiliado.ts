@@ -15,7 +15,7 @@ export interface Afiliado {
   cedula: string;
   numeroContrato: string;
   sede: Sede;
-  vereda?: string;
+  ubicacion?: string; // vacía = la misma sede
   planId: string;
   fechaAfiliacionReal: Date;
   valorCuotaMensual: number;

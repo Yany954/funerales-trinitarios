@@ -13,7 +13,7 @@ export interface ActualizarAfiliadoInput {
   tieneSeguroVida?: boolean;
   aseguradora?: string;
   fechaNacimiento?: string;
-  vereda?: string;
+  ubicacion?: string; // "" = quitar (queda la sede)
   observaciones?: string;
 }
 

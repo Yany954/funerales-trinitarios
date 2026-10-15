@@ -15,7 +15,7 @@ import { eliminarAfiliado } from "../api/client";
 import { confirmarEliminar } from "../utils/confirmar";
 import PanelHistorialServicios from "../components/PanelHistorialServicios";
 import CampoPrecio from "../components/CampoPrecio";
-import { VEREDAS_POR_MUNICIPIO } from "../types";
+import { UBICACIONES_POR_SEDE, ubicacionDe } from "../types";
 import { PARENTESCOS } from "../utils/parentescos";
 import { limiteBeneficiariosDelPlan, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
 import { normalizarCedula } from "../utils/cedula";
@@ -134,7 +134,7 @@ export default function Afiliados() {
         fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
         fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
-        vereda: String(form.get("vereda") || "") || undefined,
+        ubicacion: String(form.get("ubicacion") || "") || undefined,
         beneficiarios,
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
@@ -291,12 +291,14 @@ export default function Afiliados() {
             )}
 
             <select
-              name="vereda"
+              name="ubicacion"
               disabled={!(rol === "admin" ? sedeForm : sedeAsignada)}
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50"
             >
-              <option value="">Vereda (opcional)…</option>
-              {(VEREDAS_POR_MUNICIPIO[rol === "admin" ? sedeForm : sedeAsignada ?? ""] ?? []).map((v) => (
+              <option value="">
+                {(rol === "admin" ? sedeForm : sedeAsignada) ? `Ubicación: ${rol === "admin" ? sedeForm : sedeAsignada} (por defecto)` : "Ubicación…"}
+              </option>
+              {(UBICACIONES_POR_SEDE[rol === "admin" ? sedeForm : sedeAsignada ?? ""] ?? []).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
@@ -362,7 +364,7 @@ export default function Afiliados() {
           { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId, orden: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
           { encabezado: "Fecha afiliación", render: (a: Afiliado) => formatoFecha(a.fechaAfiliacionReal), orden: (a: Afiliado) => aMilisegundos(a.fechaAfiliacionReal) },
           { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual), orden: (a: Afiliado) => a.valorCuotaMensual },
-          { encabezado: "Vereda", render: (a: Afiliado) => a.vereda ?? "—", orden: (a: Afiliado) => a.vereda },
+          { encabezado: "Ubicación", render: (a: Afiliado) => ubicacionDe(a), orden: (a: Afiliado) => ubicacionDe(a) },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (
