@@ -10,7 +10,7 @@ export type Sede = "Pailitas" | "Tamalameque" | "Pelaya" | "Curumaní";
 export const VEREDAS_POR_MUNICIPIO: Record<string, string[]> = {
   Pailitas: ["Las Vegas", "Palestina", "Floresta"],
   Curumaní: ["Sabana Grande", "San Roque"],
-  Pelaya: ["Floresta", "Costilla", "San Bernardo"],
+  Pelaya: ["Floresta", "Costilla", "San Bernardo", "Ayacucho", "Simaña", "La Sabana", "Pueblo Nuevo", "Mundo al revés","Las Palmas","Los Naranjos"],
   Tamalameque: ["Antequera", "Brisas", "Pasacorriendo"],
 };
 
@@ -34,6 +34,7 @@ export interface Beneficiario {
   fallecido?: boolean;
   fechaFallecimiento?: unknown;
   certificadoDefuncionURL?: string;
+  adicional?: boolean; // pagó $10.000/mes aparte por superar el cupo
   novedades?: { tipo: "ingreso" | "retiro"; fecha: unknown; motivo?: string }[];
 }
 
@@ -43,6 +44,7 @@ export interface BeneficiarioEntrada {
   parentesco: string;
   cedula: string;
   fechaNacimiento?: string; // "yyyy-mm-dd"
+  adicional?: boolean;
 }
 
 export interface Afiliado {
@@ -68,7 +70,7 @@ export interface CrearAfiliadoInput {
   sede: Sede;
   vereda?: string;
   planId: string;
-  fechaNacimiento: string;
+  fechaNacimiento?: string;
   fechaAfiliacionReal: string;
   valorCuotaMensual: number;
   beneficiarios: BeneficiarioEntrada[];

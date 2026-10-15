@@ -4,12 +4,14 @@ import type { User } from "firebase/auth";
 import { alCambiarSesion, iniciarSesion, recuperarContrasena } from "./api/client";
 import { router } from "./router";
 import { RolProvider } from "./auth/RolContext";
+import { Eye, EyeOff } from "lucide-react";
 
 function PantallaLogin() {
   const [modo, setModo] = useState<"login" | "recuperar">("login");
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [verContrasena, setVerContrasena] = useState(false);
 
   async function manejarLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,7 +56,17 @@ function PantallaLogin() {
         {modo === "login" ? (
           <form onSubmit={manejarLogin} className="space-y-4">
             <input name="email" type="email" required placeholder="Correo" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
-            <input name="password" type="password" required placeholder="Contraseña" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
+            <div className="relative">
+              <input name="password" type={verContrasena ? "text" : "password"} required placeholder="Contraseña" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 pr-10 text-sm outline-none focus:border-vino-400" />
+              <button
+                type="button"
+                onClick={() => setVerContrasena((v) => !v)}
+                aria-label={verContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-tinta/40 hover:text-tinta"
+              >
+                {verContrasena ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={cargando} className="w-full rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {cargando ? "Entrando…" : "Entrar"}

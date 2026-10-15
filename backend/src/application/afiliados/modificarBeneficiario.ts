@@ -1,7 +1,11 @@
 import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { claveBeneficiario } from "../../domain/value-objects/beneficiario-clave";
-import { LIMITE_BENEFICIARIOS_POR_ANIO, contarBeneficiariosQueOcupanCupo } from "../../domain/value-objects/cupo-beneficiarios";
+import {
+  LIMITE_BENEFICIARIOS_POR_ANIO,
+  ajusteCuotaPorAdicionales,
+  contarBeneficiariosQueOcupanCupo,
+} from "../../domain/value-objects/cupo-beneficiarios";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
 
 export interface IdentificadorBeneficiario {
@@ -34,7 +38,13 @@ export async function modificarBeneficiario(
     }
   }
 
-  const actualizado = await repo.actualizar(input.afiliadoId, { beneficiarios, metadata });
+  // Retirar/fallecer un adicional resta $10.000 de la cuota; reingresarlo (o deshacer) los vuelve a sumar.
+  const ajuste = ajusteCuotaPorAdicionales(actual.beneficiarios, beneficiarios);
+  const actualizado = await repo.actualizar(input.afiliadoId, {
+    beneficiarios,
+    ...(ajuste !== 0 && { valorCuotaMensual: actual.valorCuotaMensual + ajuste }),
+    metadata,
+  });
   await repo.sincronizarPersonasCubiertas(actualizado);
   return actualizado;
 }

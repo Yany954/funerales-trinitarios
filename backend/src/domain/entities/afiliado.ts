@@ -19,7 +19,7 @@ export interface Afiliado {
   planId: string;
   fechaAfiliacionReal: Date;
   valorCuotaMensual: number;
-  fechaNacimiento: Date;
+  fechaNacimiento?: Date;
   estadoPlan: "activo" | "inactivo" | "en mora";
   fechaAfiliacion: Date;
   beneficiarios: Beneficiario[];
@@ -47,6 +47,7 @@ export interface BeneficiarioEntrada {
   parentesco: string;
   cedula: string;
   fechaNacimiento?: string;
+  adicional?: boolean; // pagó $10.000/mes aparte del plan por superar el cupo
 }
 export interface Beneficiario {
   nombre: string;
@@ -56,6 +57,7 @@ export interface Beneficiario {
   fallecido?: boolean;
   fechaFallecimiento?: Date;
   fechaNacimiento?: Date;
+  adicional?: boolean; // no ocupa cupo; suma $10.000 a la cuota mientras esté activo
   novedades?: NovedadBeneficiario[];
   certificadoDefuncionURL?: string;
 }

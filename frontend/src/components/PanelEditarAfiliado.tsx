@@ -35,7 +35,7 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
         planId: String(form.get("planId")),
         vereda: String(form.get("vereda") || "") || undefined,
         fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
-        fechaNacimiento: String(form.get("fechaNacimiento")),
+        fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
@@ -69,8 +69,8 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
           </select>
           <label className="block text-xs text-tinta/50">Fecha de afiliación</label>
           <input name="fechaAfiliacionReal" type="date" required defaultValue={aInputDate(afiliado.fechaAfiliacionReal)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-          <label className="block text-xs text-tinta/50">Fecha de nacimiento</label>
-<input name="fechaNacimiento" type="date" required defaultValue={aInputDate(afiliado.fechaNacimiento)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label className="block text-xs text-tinta/50">Fecha de nacimiento (opcional)</label>
+<input name="fechaNacimiento" type="date" defaultValue={aInputDate(afiliado.fechaNacimiento)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
 <label className="block text-xs text-tinta/50">Cuota mensual que paga</label>
           <CampoPrecio name="valorCuotaMensual" required valorInicial={afiliado.valorCuotaMensual} placeholder="Cuota mensual" />
           <label className="flex items-center gap-2 text-sm text-tinta/70">

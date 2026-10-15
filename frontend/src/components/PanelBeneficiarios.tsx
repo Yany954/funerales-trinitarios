@@ -7,8 +7,14 @@ import {
   deshacerNovedadBeneficiario,
 } from "../api/client";
 import SubirDocumento from "./SubirDocumento";
-import { formatoFecha, calcularEdad } from "../utils/formato";
-import { contarBeneficiariosQueOcupanCupo, estaRetirado, LIMITE_BENEFICIARIOS_POR_ANIO } from "../utils/cupoBeneficiarios";
+import { formatoFecha, calcularEdad, formatoPesos } from "../utils/formato";
+import {
+  contarAdicionalesActivos,
+  contarBeneficiariosQueOcupanCupo,
+  estaRetirado,
+  LIMITE_BENEFICIARIOS_POR_ANIO,
+  VALOR_BENEFICIARIO_ADICIONAL,
+} from "../utils/cupoBeneficiarios";
 import { confirmarAccion } from "../utils/confirmar";
 import { PARENTESCOS } from "../utils/parentescos";
 import type { Afiliado, Beneficiario } from "../types";
@@ -20,6 +26,9 @@ interface Props {
 
 type Modo = "fallecimiento" | "novedad";
 
+/** Fila en edición; `requierePago` marca las filas nuevas agregadas con el cupo lleno. */
+type Fila = Beneficiario & { requierePago?: boolean };
+
 function aInputDate(valor: unknown): string {
   if (!valor) return "";
   const conToDate = valor as { toDate?: () => Date };
@@ -28,7 +37,7 @@ function aInputDate(valor: unknown): string {
 }
 
 export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
-  const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>(afiliado.beneficiarios ?? []);
+  const [beneficiarios, setBeneficiarios] = useState<Fila[]>(afiliado.beneficiarios ?? []);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,9 +48,10 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
   const [procesando, setProcesando] = useState(false);
 
   const anioActual = new Date().getFullYear();
-  const cupoUsado = contarBeneficiariosQueOcupanCupo(beneficiarios, anioActual);
+  const cupoUsado = contarBeneficiariosQueOcupanCupo(beneficiarios.filter((b) => !b.requierePago), anioActual);
+  const adicionales = contarAdicionalesActivos(beneficiarios);
 
-  function actualizarFila(i: number, campo: "nombre" | "parentesco" | "cedula" | "fechaNacimiento", valor: string) {
+  function actualizarFila<K extends "nombre" | "parentesco" | "cedula" | "fechaNacimiento" | "adicional">(i: number, campo: K, valor: Fila[K]) {
     setBeneficiarios((prev) => {
       const copia = [...prev];
       copia[i] = { ...copia[i], [campo]: valor };
@@ -51,15 +61,19 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
 
   async function guardar() {
     setError(null);
+    const conNombre = beneficiarios.filter((b) => b.nombre.trim());
+    if (conNombre.some((b) => b.requierePago && !b.adicional)) {
+      setError(`Ya están los ${LIMITE_BENEFICIARIOS_POR_ANIO} cupos ocupados: marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes para agregar el adicional.`);
+      return;
+    }
     setGuardando(true);
     try {
-      const validos = beneficiarios
-        .filter((b) => b.nombre.trim())
-        .map((b) => ({
+      const validos = conNombre.map((b) => ({
           nombre: b.nombre,
           parentesco: b.parentesco,
           cedula: b.cedula ?? "",
           fechaNacimiento: aInputDate(b.fechaNacimiento) || undefined,
+          adicional: b.requierePago ? true : undefined,
         }));
       await actualizarBeneficiarios({ afiliadoId: afiliado.id, beneficiarios: validos });
       onCerrar();
@@ -133,6 +147,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
             <h3 className="font-display text-lg text-vino-900">Beneficiarios — {afiliado.nombreCompleto}</h3>
             <p className="text-xs text-tinta/50">
               Titular, cédula {afiliado.cedula} · {cupoUsado} de {LIMITE_BENEFICIARIOS_POR_ANIO} cupos usados en {anioActual}
+              {adicionales > 0 && ` · ${adicionales} adicional(es) (+${formatoPesos(adicionales * VALOR_BENEFICIARIO_ADICIONAL)}/mes)`}
             </p>
           </div>
           <button onClick={onCerrar} className="text-tinta/40 hover:text-tinta">
@@ -173,6 +188,15 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-tinta/50">
                   {b.fechaAdicion ? <span>Ingreso: {formatoFecha(b.fechaAdicion)}</span> : null}
                   {b.fechaNacimiento ? <span>Edad: {calcularEdad(b.fechaNacimiento)} años</span> : null}
+                  {b.adicional && guardado ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">Adicional · {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes</span>
+                  ) : null}
+                  {b.requierePago && (
+                    <label className="flex items-center gap-1.5 text-amber-700">
+                      <input type="checkbox" checked={!!b.adicional} onChange={(e) => actualizarFila(i, "adicional", e.target.checked)} />
+                      Pagó {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan por adición de beneficiario
+                    </label>
+                  )}
 
                   {b.fallecido ? (
                     <span className="flex flex-wrap items-center gap-1 text-red-700">
@@ -218,6 +242,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
                 {abierto?.i === i && abierto.modo === "fallecimiento" && (
                   <div className="mt-2 space-y-2 rounded-lg bg-vino-50 p-3">
                     <p className="text-xs font-medium text-vino-900">Novedad de fallecimiento</p>
+                    {b.adicional && <p className="text-xs text-tinta/50">La cuota mensual bajará {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.</p>}
                     <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
                     <SubirDocumento carpeta={`afiliados/${afiliado.sede}/${afiliado.id}`} documentos={certificadoURL} onCambiar={setCertificadoURL} />
                     <div className="flex gap-2">
@@ -237,7 +262,13 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
                     <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
                     <input placeholder="Motivo (opcional, ej. separación)" value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
                     <p className="text-xs text-tinta/50">
-                      {retirado ? "Volverá a ocupar un cupo." : "Se conserva toda su información y se libera un cupo."}
+                      {b.adicional
+                        ? retirado
+                          ? `La cuota mensual subirá ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.`
+                          : `Se conserva toda su información y la cuota mensual bajará ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.`
+                        : retirado
+                          ? "Volverá a ocupar un cupo."
+                          : "Se conserva toda su información y se libera un cupo."}
                     </p>
                     <div className="flex gap-2">
                       <button onClick={() => confirmarNovedad(b)} disabled={procesando} className="rounded-lg bg-vino-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-vino-600 disabled:opacity-60">
@@ -256,9 +287,17 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
               <Plus size={14} /> Agregar beneficiario
             </button>
           ) : (
-            <p className="text-xs text-amber-700">
-              Ya se usaron los {LIMITE_BENEFICIARIOS_POR_ANIO} cupos de este año — para agregar otro, registra el retiro de alguno.
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-amber-700">
+                Ya se usaron los {LIMITE_BENEFICIARIOS_POR_ANIO} cupos de este año. Puedes agregar uno adicional pagando {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan, o registrar el retiro de alguno.
+              </p>
+              <button
+                onClick={() => setBeneficiarios((prev) => [...prev, { nombre: "", parentesco: "", cedula: "", requierePago: true }])}
+                className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline"
+              >
+                <Plus size={14} /> Agregar beneficiario adicional (+{formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes)
+              </button>
+            </div>
           )}
         </div>
 

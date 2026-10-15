@@ -2,7 +2,12 @@ import { Afiliado, BeneficiarioEntrada } from "../../domain/entities/afiliado";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { Sede } from "../../domain/value-objects/rol-usuario";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
-import { LIMITE_BENEFICIARIOS_POR_ANIO, contarBeneficiariosQueOcupanCupo } from "../../domain/value-objects/cupo-beneficiarios";
+import {
+  LIMITE_BENEFICIARIOS_POR_ANIO,
+  VALOR_BENEFICIARIO_ADICIONAL,
+  contarAdicionalesActivos,
+  contarBeneficiariosQueOcupanCupo,
+} from "../../domain/value-objects/cupo-beneficiarios";
 import { Beneficiario } from "../../domain/entities/afiliado";
 export interface CrearAfiliadoInput {
   nombreCompleto: string;
@@ -12,7 +17,7 @@ export interface CrearAfiliadoInput {
   planId: string;
   fechaAfiliacionReal: string;
   vereda?: string;
-  fechaNacimiento: string;
+  fechaNacimiento?: string;
   valorCuotaMensual: number;
   beneficiarios: BeneficiarioEntrada[];
   tieneSeguroVida: boolean;
@@ -28,7 +33,6 @@ export async function crearAfiliado(
   if (!input.sede) throw new Error("La sede es obligatoria.");
   if (!input.numeroContrato?.trim()) throw new Error("El número de contrato es obligatorio.");
   if (!input.fechaAfiliacionReal) throw new Error("La fecha de afiliación es obligatoria.");
-  if (!input.fechaNacimiento) throw new Error("La fecha de nacimiento es obligatoria.");
   if (!input.valorCuotaMensual || input.valorCuotaMensual <= 0) throw new Error("Ingresa el valor de la cuota mensual.");
 
 
@@ -38,11 +42,14 @@ export async function crearAfiliado(
     parentesco: b.parentesco,
     cedula: b.cedula,
     fechaNacimiento: b.fechaNacimiento ? new Date(b.fechaNacimiento) : undefined,
+    adicional: b.adicional || undefined,
     fechaAdicion: ahora,
   }));
   const ocupados = contarBeneficiariosQueOcupanCupo(beneficiariosConFecha, ahora.getFullYear());
   if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {
-    throw new Error(`El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año.`);
+    throw new Error(
+      `El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
+    );
   }
 
   const nuevo: Omit<Afiliado, "id"> = {
@@ -52,11 +59,11 @@ export async function crearAfiliado(
     sede: input.sede,
     planId: input.planId,
     fechaAfiliacionReal: new Date(input.fechaAfiliacionReal),
-    valorCuotaMensual: input.valorCuotaMensual,
+    valorCuotaMensual: input.valorCuotaMensual + contarAdicionalesActivos(beneficiariosConFecha) * VALOR_BENEFICIARIO_ADICIONAL,
     estadoPlan: "activo",
     fechaAfiliacion: ahora,
     beneficiarios: beneficiariosConFecha,
-    fechaNacimiento: new Date(input.fechaNacimiento),
+    fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
     ultimoPago: null,
     tieneSeguroVida: input.tieneSeguroVida,
     aseguradora: input.aseguradora,

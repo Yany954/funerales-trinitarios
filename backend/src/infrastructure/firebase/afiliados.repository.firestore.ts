@@ -22,7 +22,7 @@ function aFirestore(afiliado: Omit<Afiliado, "id">) {
     ...afiliado,
     fechaAfiliacion: Timestamp.fromDate(afiliado.fechaAfiliacion),
     fechaAfiliacionReal: Timestamp.fromDate(afiliado.fechaAfiliacionReal),
-    fechaNacimiento: Timestamp.fromDate(afiliado.fechaNacimiento),
+    fechaNacimiento: afiliado.fechaNacimiento ? Timestamp.fromDate(afiliado.fechaNacimiento) : undefined,
     beneficiarios: afiliado.beneficiarios.map((b) => ({
       ...b,
       fechaNacimiento: b.fechaNacimiento ? Timestamp.fromDate(b.fechaNacimiento) : undefined,

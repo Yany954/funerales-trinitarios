@@ -1,7 +1,11 @@
 import { Afiliado, Beneficiario, BeneficiarioEntrada } from "../../domain/entities/afiliado";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { claveBeneficiario } from "../../domain/value-objects/beneficiario-clave";
-import { LIMITE_BENEFICIARIOS_POR_ANIO, contarBeneficiariosQueOcupanCupo } from "../../domain/value-objects/cupo-beneficiarios";
+import {
+  LIMITE_BENEFICIARIOS_POR_ANIO,
+  ajusteCuotaPorAdicionales,
+  contarBeneficiariosQueOcupanCupo,
+} from "../../domain/value-objects/cupo-beneficiarios";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
 export interface ActualizarBeneficiariosInput {
@@ -47,7 +51,15 @@ export async function actualizarBeneficiarios(
     if (existente) {
       return { ...existente, nombre: entrada.nombre, parentesco: entrada.parentesco, cedula: entrada.cedula ?? "", fechaNacimiento };
     }
-    return { nombre: entrada.nombre, parentesco: entrada.parentesco, cedula: entrada.cedula ?? "", fechaNacimiento, fechaAdicion: ahora };
+    // Solo los nuevos pueden marcarse como adicionales; los existentes conservan lo que tenían.
+    return {
+      nombre: entrada.nombre,
+      parentesco: entrada.parentesco,
+      cedula: entrada.cedula ?? "",
+      fechaNacimiento,
+      adicional: entrada.adicional || undefined,
+      fechaAdicion: ahora,
+    };
   });
 
   // El historial (fallecidos y retirados/inactivos) nunca se pierde,
@@ -57,10 +69,17 @@ export async function actualizarBeneficiarios(
 
   const ocupados = contarBeneficiariosQueOcupanCupo(beneficiariosNuevos, ahora.getFullYear());
   if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {
-    throw new Error(`El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año. Esta lista tendría ${ocupados}.`);
+    throw new Error(
+      `El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año. Esta lista tendría ${ocupados}. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
+    );
   }
 
-  const actualizado = await repo.actualizar(input.afiliadoId, { beneficiarios: beneficiariosNuevos, metadata });
+  const ajuste = ajusteCuotaPorAdicionales(actual.beneficiarios, beneficiariosNuevos);
+  const actualizado = await repo.actualizar(input.afiliadoId, {
+    beneficiarios: beneficiariosNuevos,
+    ...(ajuste !== 0 && { valorCuotaMensual: actual.valorCuotaMensual + ajuste }),
+    metadata,
+  });
   await repo.sincronizarPersonasCubiertas(actualizado);
   return actualizado;
 }

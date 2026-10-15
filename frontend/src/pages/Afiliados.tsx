@@ -17,8 +17,8 @@ import PanelHistorialServicios from "../components/PanelHistorialServicios";
 import CampoPrecio from "../components/CampoPrecio";
 import { VEREDAS_POR_MUNICIPIO } from "../types";
 import { PARENTESCOS } from "../utils/parentescos";
+import { LIMITE_BENEFICIARIOS_POR_ANIO, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
 
-import { reindexarPersonasCubiertas } from "../api/client";
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -74,6 +74,7 @@ export default function Afiliados() {
     "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
     inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
   };
+  const adicionalesNuevos = beneficiariosNuevo.filter((b, i) => i >= LIMITE_BENEFICIARIOS_POR_ANIO && b.adicional && b.nombre.trim()).length;
   const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
   const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
@@ -110,6 +111,15 @@ export default function Afiliados() {
     setError(null);
     setGuardando(true);
     const form = new FormData(e.currentTarget);
+    // Del 8° en adelante solo entran si se marcó el pago adicional.
+    const beneficiarios = beneficiariosNuevo
+      .map((b, i) => ({ ...b, adicional: i >= LIMITE_BENEFICIARIOS_POR_ANIO ? !!b.adicional : undefined }))
+      .filter((b) => b.nombre.trim());
+    if (beneficiarios.some((b) => b.adicional === false)) {
+      setError(`Para agregar más de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes en cada adicional.`);
+      setGuardando(false);
+      return;
+    }
     try {
       await crearAfiliado({
         nombreCompleto: String(form.get("nombreCompleto")),
@@ -119,9 +129,9 @@ export default function Afiliados() {
         sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
         fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
-        fechaNacimiento: String(form.get("fechaNacimiento")),
+        fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         vereda: String(form.get("vereda") || "") || undefined,
-        beneficiarios: beneficiariosNuevo.filter((b) => b.nombre.trim()),
+        beneficiarios,
         tieneSeguroVida: form.get("tieneSeguroVida") === "on",
       });
       setMostrarFormulario(false);
@@ -133,7 +143,7 @@ export default function Afiliados() {
       setGuardando(false);
     }
   }
-  function actualizarBeneficiarioNuevo(i: number, campo: keyof BeneficiarioEntrada, valor: string) {
+  function actualizarBeneficiarioNuevo<K extends keyof BeneficiarioEntrada>(i: number, campo: K, valor: BeneficiarioEntrada[K]) {
     setBeneficiariosNuevo((prev) => {
       const copia = [...prev];
       copia[i] = { ...copia[i], [campo]: valor };
@@ -163,15 +173,6 @@ export default function Afiliados() {
           className="rounded-lg bg-vino-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-vino-600"
         >
           Buscar
-        </button>
-        <button
-          onClick={async () => {
-            const { total } = await reindexarPersonasCubiertas();
-            alert(`Listo: ${total} afiliados reindexados`);
-          }}
-          className="rounded-lg border border-vino-100 px-3 py-2 text-xs text-tinta/60"
-        >
-          Reindexar (temporal)
         </button>
       </form>
 
@@ -262,8 +263,8 @@ export default function Afiliados() {
               required
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
             />
-            <label className="block text-xs text-tinta/50 sm:col-span-2">Fecha de nacimiento (titular)</label>
-            <input name="fechaNacimiento" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <label className="block text-xs text-tinta/50 sm:col-span-2">Fecha de nacimiento (titular, opcional)</label>
+            <input name="fechaNacimiento" type="date" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <CampoPrecio name="valorCuotaMensual" required placeholder="Cuota mensual que paga" />
             <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
@@ -313,6 +314,12 @@ export default function Afiliados() {
                 <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
                   <Trash2 size={16} className="mx-auto" />
                 </button>
+                {i >= LIMITE_BENEFICIARIOS_POR_ANIO && (
+                  <label className="col-span-2 flex items-center gap-2 text-xs text-amber-700 sm:col-span-5">
+                    <input type="checkbox" checked={!!b.adicional} onChange={(e) => actualizarBeneficiarioNuevo(i, "adicional", e.target.checked)} />
+                    Pagó {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan por adición de beneficiario
+                  </label>
+                )}
               </div>
             ))}
             <button
@@ -320,8 +327,16 @@ export default function Afiliados() {
               onClick={() => setBeneficiariosNuevo((prev) => [...prev, { nombre: "", parentesco: "", cedula: "" }])}
               className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline"
             >
-              <Plus size={14} /> Agregar beneficiario
+              <Plus size={14} />{" "}
+              {beneficiariosNuevo.length >= LIMITE_BENEFICIARIOS_POR_ANIO
+                ? `Agregar beneficiario adicional (+${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes)`
+                : "Agregar beneficiario"}
             </button>
+            {adicionalesNuevos > 0 && (
+              <p className="text-xs text-tinta/50">
+                Se sumarán {formatoPesos(adicionalesNuevos * VALOR_BENEFICIARIO_ADICIONAL)} a la cuota mensual por {adicionalesNuevos} beneficiario(s) adicional(es).
+              </p>
+            )}
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
