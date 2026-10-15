@@ -15,6 +15,13 @@ export function formatoFecha(valor: unknown): string {
   if (isNaN(fecha.getTime())) return "Fecha no disponible";
   return fecha.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 }
+/** Timestamp de Firestore / string / Date → milisegundos (para ordenar). undefined si no hay fecha válida. */
+export function aMilisegundos(valor: unknown): number | undefined {
+  if (!valor) return undefined;
+  const conToDate = valor as { toDate?: () => Date };
+  const fecha = conToDate.toDate ? conToDate.toDate() : new Date(valor as string | number | Date);
+  return isNaN(fecha.getTime()) ? undefined : fecha.getTime();
+}
 export function calcularEdad(fechaNacimiento: unknown): number | null {
   if (!fechaNacimiento) return null;
   const conToDate = fechaNacimiento as { toDate?: () => Date };

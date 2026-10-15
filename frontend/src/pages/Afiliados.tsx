@@ -7,7 +7,7 @@ import type { Afiliado, BeneficiarioEntrada, PersonaCubierta, PlanFunerario, Res
 import { useRol } from "../auth/RolContext";
 import PanelPagos from "../components/PanelPagos";
 import { Receipt } from "lucide-react";
-import { calcularEdad, formatoFecha, formatoPesos } from "../utils/formato";
+import { aMilisegundos, calcularEdad, formatoFecha, formatoPesos } from "../utils/formato";
 import PanelBeneficiarios from "../components/PanelBeneficiarios";
 import { Users } from "lucide-react";
 import PanelEditarAfiliado from "../components/PanelEditarAfiliado";
@@ -17,7 +17,8 @@ import PanelHistorialServicios from "../components/PanelHistorialServicios";
 import CampoPrecio from "../components/CampoPrecio";
 import { VEREDAS_POR_MUNICIPIO } from "../types";
 import { PARENTESCOS } from "../utils/parentescos";
-import { LIMITE_BENEFICIARIOS_POR_ANIO, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
+import { limiteBeneficiariosDelPlan, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
+import { normalizarCedula } from "../utils/cedula";
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
@@ -39,6 +40,7 @@ export default function Afiliados() {
   const [afiliadoEditando, setAfiliadoEditando] = useState<Afiliado | null>(null);
   const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
   const [sedeForm, setSedeForm] = useState<string>("");
+  const [planForm, setPlanForm] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | Afiliado["estadoPlan"]>("todos");
 
   useEffect(() => {
@@ -74,7 +76,9 @@ export default function Afiliados() {
     "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
     inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
   };
-  const adicionalesNuevos = beneficiariosNuevo.filter((b, i) => i >= LIMITE_BENEFICIARIOS_POR_ANIO && b.adicional && b.nombre.trim()).length;
+  const limitePlan = (planId: string) => limiteBeneficiariosDelPlan(planes.find((p) => p.id === planId)?.nombre);
+  const limiteNuevo = limitePlan(planForm);
+  const adicionalesNuevos = beneficiariosNuevo.filter((b, i) => i >= limiteNuevo && b.adicional && b.nombre.trim()).length;
   const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
   const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
@@ -113,10 +117,10 @@ export default function Afiliados() {
     const form = new FormData(e.currentTarget);
     // Del 8° en adelante solo entran si se marcó el pago adicional.
     const beneficiarios = beneficiariosNuevo
-      .map((b, i) => ({ ...b, adicional: i >= LIMITE_BENEFICIARIOS_POR_ANIO ? !!b.adicional : undefined }))
+      .map((b, i) => ({ ...b, adicional: i >= limiteNuevo ? !!b.adicional : undefined }))
       .filter((b) => b.nombre.trim());
     if (beneficiarios.some((b) => b.adicional === false)) {
-      setError(`Para agregar más de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes en cada adicional.`);
+      setError(`Para agregar más de ${limiteNuevo} beneficiarios marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes en cada adicional.`);
       setGuardando(false);
       return;
     }
@@ -136,6 +140,7 @@ export default function Afiliados() {
       });
       setMostrarFormulario(false);
       setBeneficiariosNuevo([]);
+      setPlanForm("");
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el afiliado.");
@@ -152,7 +157,7 @@ export default function Afiliados() {
   }
   function beneficiarioDe(afiliado: Afiliado, persona: PersonaCubierta) {
     return afiliado.beneficiarios?.find((b) =>
-      persona.cedula ? b.cedula === persona.cedula : b.nombre === persona.nombreCompleto
+      persona.cedula ? normalizarCedula(b.cedula) === normalizarCedula(persona.cedula) : b.nombre === persona.nombreCompleto
     );
   }
   return (
@@ -251,7 +256,7 @@ export default function Afiliados() {
           <div className="grid gap-3 sm:grid-cols-2">
             <input name="nombreCompleto" required placeholder="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <input name="cedula" required placeholder="Cédula (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <select name="planId" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+            <select name="planId" required value={planForm} onChange={(e) => setPlanForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Plan…</option>
               {planes.map((p) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -314,7 +319,7 @@ export default function Afiliados() {
                 <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
                   <Trash2 size={16} className="mx-auto" />
                 </button>
-                {i >= LIMITE_BENEFICIARIOS_POR_ANIO && (
+                {i >= limiteNuevo && (
                   <label className="col-span-2 flex items-center gap-2 text-xs text-amber-700 sm:col-span-5">
                     <input type="checkbox" checked={!!b.adicional} onChange={(e) => actualizarBeneficiarioNuevo(i, "adicional", e.target.checked)} />
                     Pagó {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan por adición de beneficiario
@@ -328,7 +333,7 @@ export default function Afiliados() {
               className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline"
             >
               <Plus size={14} />{" "}
-              {beneficiariosNuevo.length >= LIMITE_BENEFICIARIOS_POR_ANIO
+              {beneficiariosNuevo.length >= limiteNuevo
                 ? `Agregar beneficiario adicional (+${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes)`
                 : "Agregar beneficiario"}
             </button>
@@ -351,13 +356,13 @@ export default function Afiliados() {
 
       <DataTable
         columnas={[
-          { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto },
+          { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto, orden: (a: Afiliado) => a.nombreCompleto },
           { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
           { encabezado: "N° Contrato", render: (a: Afiliado) => a.numeroContrato },
-          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
-          { encabezado: "Fecha afiliación", render: (a: Afiliado) => formatoFecha(a.fechaAfiliacionReal) },
-          { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual) },
-          { encabezado: "Vereda", render: (a: Afiliado) => a.vereda ?? "—" },
+          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId, orden: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
+          { encabezado: "Fecha afiliación", render: (a: Afiliado) => formatoFecha(a.fechaAfiliacionReal), orden: (a: Afiliado) => aMilisegundos(a.fechaAfiliacionReal) },
+          { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual), orden: (a: Afiliado) => a.valorCuotaMensual },
+          { encabezado: "Vereda", render: (a: Afiliado) => a.vereda ?? "—", orden: (a: Afiliado) => a.vereda },
           {
             encabezado: "Estado",
             render: (a: Afiliado) => (
@@ -417,7 +422,7 @@ export default function Afiliados() {
       />
       {afiliadoServicios && <PanelHistorialServicios afiliado={afiliadoServicios} onCerrar={() => setAfiliadoServicios(null)} />}
       {afiliadoEditando && <PanelEditarAfiliado afiliado={afiliadoEditando} planes={planes} onCerrar={() => setAfiliadoEditando(null)} />}
-      {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
+      {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} limite={limitePlan(afiliadoBeneficiarios.planId)} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
       {afiliadoPagos && <PanelPagos afiliado={afiliadoPagos} onCerrar={() => setAfiliadoPagos(null)} />}
     </div>
   );

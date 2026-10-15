@@ -1,7 +1,14 @@
 import type { Beneficiario } from "../types";
 
 export const LIMITE_BENEFICIARIOS_POR_ANIO = 7;
+export const LIMITE_BENEFICIARIOS_PLAN_INTEGRAL = 8;
 export const VALOR_BENEFICIARIO_ADICIONAL = 10000;
+
+/** Cupos sin costo extra según el plan: el plan integral tiene 8, los demás 7. */
+export function limiteBeneficiariosDelPlan(nombrePlan: string | undefined): number {
+  const nombre = (nombrePlan ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return nombre.includes("integral") ? LIMITE_BENEFICIARIOS_PLAN_INTEGRAL : LIMITE_BENEFICIARIOS_POR_ANIO;
+}
 
 function anioDe(valor: unknown): number | undefined {
   if (!valor) return undefined;

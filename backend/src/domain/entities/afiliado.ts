@@ -38,6 +38,7 @@ export interface PersonaCubierta {
   nombreBusqueda: string;
   palabrasNombre: string[];
   cedula: string;
+  cedulaBusqueda?: string; // cédula sin puntos/espacios, para buscar
   esTitular: boolean;
   parentesco?: string;
   afiliadoId: string;

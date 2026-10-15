@@ -3,6 +3,7 @@ import { Afiliado, Beneficiario, PersonaCubierta } from "../../domain/entities/a
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
+import { normalizarCedula } from "../../domain/value-objects/cedula";
 
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
@@ -133,6 +134,7 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
       nombreBusqueda: afiliado.nombreCompleto.toLowerCase(),
       palabrasNombre: palabrasDeNombre(afiliado.nombreCompleto),
       cedula: afiliado.cedula,
+      cedulaBusqueda: normalizarCedula(afiliado.cedula),
       esTitular: true,
       afiliadoId: afiliado.id,
     };
@@ -155,6 +157,7 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
         nombreBusqueda: beneficiario.nombre.toLowerCase(),
         palabrasNombre: palabrasDeNombre(beneficiario.nombre),
         cedula: beneficiario.cedula,
+        cedulaBusqueda: normalizarCedula(beneficiario.cedula),
         esTitular: false,
         parentesco: beneficiario.parentesco,
         afiliadoId: afiliado.id,
@@ -166,10 +169,15 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
   }
 
   async buscarPersonaCubiertaPorNombreOCedula(termino: string): Promise<PersonaCubierta[]> {
-    // Búsqueda por cédula: coincidencia exacta.
-    const porCedula = await db.collection(PERSONAS_CUBIERTAS).where("cedula", "==", termino).get();
-    if (!porCedula.empty) {
-      return porCedula.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PersonaCubierta, "id">) }));
+    // Búsqueda por cédula, sin importar puntos, espacios o guiones ("1.2.3" = "123").
+    // El segundo intento (tal cual se escribió) cubre registros indexados antes de cedulaBusqueda.
+    const cedulaNormalizada = normalizarCedula(termino);
+    const intentos: [string, string][] = cedulaNormalizada ? [["cedulaBusqueda", cedulaNormalizada], ["cedula", termino]] : [];
+    for (const [campo, valor] of intentos) {
+      const porCedula = await db.collection(PERSONAS_CUBIERTAS).where(campo, "==", valor).get();
+      if (!porCedula.empty) {
+        return porCedula.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PersonaCubierta, "id">) }));
+      }
     }
 
     // Búsqueda por nombre: cada palabra escrita (nombre, apellido, o varias a

@@ -20,6 +20,12 @@ export class PlanesRepositoryFirestore implements PlanesRepository {
       return { id: d.id, ...data, metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() } } as PlanFunerario;
     });
   }
+  async obtenerPorId(id: string): Promise<PlanFunerario | null> {
+    const doc = await db.collection(PLANES).doc(id).get();
+    if (!doc.exists) return null;
+    const data = doc.data()!;
+    return { id: doc.id, ...data, metadata: { ...data.metadata, fecha: data.metadata?.fecha?.toDate?.() } } as PlanFunerario;
+  }
   async actualizar(id: string, cambios: Partial<Omit<PlanFunerario, "id">>): Promise<PlanFunerario> {
     const datos: any = { ...cambios };
     if (cambios.metadata) datos.metadata = { ...cambios.metadata, fecha: Timestamp.fromDate(cambios.metadata.fecha) };

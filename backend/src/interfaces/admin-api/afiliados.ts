@@ -3,6 +3,8 @@ import { requireAuth } from "../../infrastructure/auth/rbac";
 import { AfiliadosRepositoryFirestore } from "../../infrastructure/firebase/afiliados.repository.firestore";
 import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
+import { limiteBeneficiariosDelPlan } from "../../domain/value-objects/cupo-beneficiarios";
+import { PlanesRepositoryFirestore } from "../../infrastructure/firebase/plan.repository.firestore";
 
 import { crearAfiliado, CrearAfiliadoInput } from "../../application/afiliados/crear-afiliado.usecase";
 import { buscarPersonaCubierta } from "../../application/afiliados/buscar-persona-cubierta.usecase";
@@ -18,6 +20,18 @@ import {
 } from "../../application/afiliados/novedadesBeneficiario.usecase";
 
 const repo = new AfiliadosRepositoryFirestore();
+const planesRepo = new PlanesRepositoryFirestore();
+
+/** Cupos sin costo extra del plan (integral: 8, demás: 7). */
+async function limiteDelPlan(planId: string | undefined): Promise<number> {
+  const plan = planId ? await planesRepo.obtenerPorId(planId) : null;
+  return limiteBeneficiariosDelPlan(plan?.nombre);
+}
+
+async function limiteDelAfiliado(afiliadoId: string): Promise<number> {
+  const afiliado = await repo.obtenerPorId(afiliadoId);
+  return limiteDelPlan(afiliado?.planId);
+}
 
 // ---------- Helpers de serialización (nunca mandar un Date/Timestamp crudo por la red) ----------
 
@@ -78,7 +92,8 @@ async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
 /** El dashboard llama esto para crear un afiliado nuevo. */
 export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   const uid = requireAuth(request);
-  const afiliado = await ejecutar(() => crearAfiliado(repo, request.data, metadataHumano(uid)));
+  const limite = await limiteDelPlan(request.data.planId);
+  const afiliado = await ejecutar(() => crearAfiliado(repo, request.data, metadataHumano(uid), limite));
   return { afiliado: serializarAfiliado(afiliado) };
 });
 
@@ -116,7 +131,8 @@ export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
 
 export const actualizarBeneficiariosFn = onCall<ActualizarBeneficiariosInput>(async (request) => {
   const uid = await autorizar(request);
-  const actualizado = await ejecutar(() => actualizarBeneficiarios(repo, request.data, metadataHumano(uid)));
+  const limite = await limiteDelAfiliado(request.data.afiliadoId);
+  const actualizado = await ejecutar(() => actualizarBeneficiarios(repo, request.data, metadataHumano(uid), limite));
   return { afiliado: serializarAfiliado(actualizado) };
 });
 
@@ -128,13 +144,15 @@ export const registrarFallecimientoBeneficiarioFn = onCall<RegistrarFallecimient
 
 export const registrarNovedadBeneficiarioFn = onCall<RegistrarNovedadInput>(async (request) => {
   const uid = await autorizar(request);
-  const afiliado = await ejecutar(() => registrarNovedadBeneficiario(repo, request.data, metadataHumano(uid)));
+  const limite = await limiteDelAfiliado(request.data.afiliadoId);
+  const afiliado = await ejecutar(() => registrarNovedadBeneficiario(repo, request.data, metadataHumano(uid), limite));
   return { afiliado: serializarAfiliado(afiliado) };
 });
 
 export const deshacerNovedadBeneficiarioFn = onCall<DeshacerNovedadInput>(async (request) => {
   const uid = await autorizar(request);
-  const afiliado = await ejecutar(() => deshacerNovedadBeneficiario(repo, request.data, metadataHumano(uid)));
+  const limite = await limiteDelAfiliado(request.data.afiliadoId);
+  const afiliado = await ejecutar(() => deshacerNovedadBeneficiario(repo, request.data, metadataHumano(uid), limite));
   return { afiliado: serializarAfiliado(afiliado) };
 });
 

@@ -17,7 +17,8 @@ export interface DeshacerNovedadInput extends IdentificadorBeneficiario {
 export async function registrarNovedadBeneficiario(
   repo: AfiliadosRepository,
   input: RegistrarNovedadInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  limite?: number
 ): Promise<Afiliado> {
   const fecha = new Date(input.fecha);
   if (isNaN(fecha.getTime())) throw new Error("La fecha de la novedad no es válida.");
@@ -36,14 +37,15 @@ export async function registrarNovedadBeneficiario(
         novedades: [...(b.novedades ?? []), { tipo: input.tipo, fecha, motivo: input.motivo?.trim() || undefined }],
       };
     },
-    { verificarCupo: input.tipo === "ingreso" } // reingresar vuelve a ocupar cupo
+    { verificarCupo: input.tipo === "ingreso", limite } // reingresar vuelve a ocupar cupo
   );
 }
 
 export async function deshacerNovedadBeneficiario(
   repo: AfiliadosRepository,
   input: DeshacerNovedadInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  limite?: number
 ): Promise<Afiliado> {
   return modificarBeneficiario(
     repo,
@@ -62,6 +64,6 @@ export async function deshacerNovedadBeneficiario(
       }
       return copia;
     },
-    { verificarCupo: true }
+    { verificarCupo: true, limite }
   );
 }

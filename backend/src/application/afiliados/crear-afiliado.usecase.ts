@@ -28,7 +28,8 @@ export interface CrearAfiliadoInput {
 export async function crearAfiliado(
   repo: AfiliadosRepository,
   input: CrearAfiliadoInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  limite = LIMITE_BENEFICIARIOS_POR_ANIO
 ): Promise<Afiliado> {
   if (!input.sede) throw new Error("La sede es obligatoria.");
   if (!input.numeroContrato?.trim()) throw new Error("El número de contrato es obligatorio.");
@@ -46,9 +47,9 @@ export async function crearAfiliado(
     fechaAdicion: ahora,
   }));
   const ocupados = contarBeneficiariosQueOcupanCupo(beneficiariosConFecha, ahora.getFullYear());
-  if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {
+  if (ocupados > limite) {
     throw new Error(
-      `El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
+      `El límite de este plan es de ${limite} beneficiarios por año. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
     );
   }
 

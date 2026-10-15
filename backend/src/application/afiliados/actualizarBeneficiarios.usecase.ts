@@ -25,7 +25,8 @@ function parsearFecha(valor: string | undefined): Date | undefined {
 export async function actualizarBeneficiarios(
   repo: AfiliadosRepository,
   input: ActualizarBeneficiariosInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  limite = LIMITE_BENEFICIARIOS_POR_ANIO
 ): Promise<Afiliado> {
   const actual = await repo.obtenerPorId(input.afiliadoId);
   if (!actual) throw new Error("Ese afiliado no existe.");
@@ -68,9 +69,9 @@ export async function actualizarBeneficiarios(
   const beneficiariosNuevos = [...nuevos, ...conservados];
 
   const ocupados = contarBeneficiariosQueOcupanCupo(beneficiariosNuevos, ahora.getFullYear());
-  if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {
+  if (ocupados > limite) {
     throw new Error(
-      `El límite es de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios por año. Esta lista tendría ${ocupados}. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
+      `El límite de este plan es de ${limite} beneficiarios por año. Esta lista tendría ${ocupados}. Para agregar más, marca el pago de $10.000/mes por beneficiario adicional.`
     );
   }
 

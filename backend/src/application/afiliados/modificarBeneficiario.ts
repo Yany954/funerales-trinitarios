@@ -19,7 +19,7 @@ export async function modificarBeneficiario(
   input: IdentificadorBeneficiario,
   metadata: MetadataCambio,
   transformar: (b: Beneficiario) => Beneficiario,
-  opciones?: { verificarCupo?: boolean }
+  opciones?: { verificarCupo?: boolean; limite?: number }
 ): Promise<Afiliado> {
   const actual = await repo.obtenerPorId(input.afiliadoId);
   if (!actual) throw new Error("Ese afiliado no existe.");
@@ -33,8 +33,9 @@ export async function modificarBeneficiario(
 
   if (opciones?.verificarCupo) {
     const ocupados = contarBeneficiariosQueOcupanCupo(beneficiarios, new Date().getFullYear());
-    if (ocupados > LIMITE_BENEFICIARIOS_POR_ANIO) {
-      throw new Error(`Reactivarlo superaría el límite de ${LIMITE_BENEFICIARIOS_POR_ANIO} beneficiarios. Retira o inactiva a otro primero.`);
+    const limite = opciones.limite ?? LIMITE_BENEFICIARIOS_POR_ANIO;
+    if (ocupados > limite) {
+      throw new Error(`Reactivarlo superaría el límite de ${limite} beneficiarios. Retira o inactiva a otro primero.`);
     }
   }
 

@@ -12,7 +12,6 @@ import {
   contarAdicionalesActivos,
   contarBeneficiariosQueOcupanCupo,
   estaRetirado,
-  LIMITE_BENEFICIARIOS_POR_ANIO,
   VALOR_BENEFICIARIO_ADICIONAL,
 } from "../utils/cupoBeneficiarios";
 import { confirmarAccion } from "../utils/confirmar";
@@ -21,6 +20,8 @@ import type { Afiliado, Beneficiario } from "../types";
 
 interface Props {
   afiliado: Afiliado;
+  /** Cupos sin costo extra del plan del afiliado. */
+  limite: number;
   onCerrar: () => void;
 }
 
@@ -36,7 +37,7 @@ function aInputDate(valor: unknown): string {
   return isNaN(fecha.getTime()) ? "" : fecha.toISOString().slice(0, 10);
 }
 
-export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
+export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props) {
   const [beneficiarios, setBeneficiarios] = useState<Fila[]>(afiliado.beneficiarios ?? []);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
     setError(null);
     const conNombre = beneficiarios.filter((b) => b.nombre.trim());
     if (conNombre.some((b) => b.requierePago && !b.adicional)) {
-      setError(`Ya están los ${LIMITE_BENEFICIARIOS_POR_ANIO} cupos ocupados: marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes para agregar el adicional.`);
+      setError(`Ya están los ${limite} cupos ocupados: marca el pago de ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes para agregar el adicional.`);
       return;
     }
     setGuardando(true);
@@ -146,7 +147,7 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
           <div>
             <h3 className="font-display text-lg text-vino-900">Beneficiarios — {afiliado.nombreCompleto}</h3>
             <p className="text-xs text-tinta/50">
-              Titular, cédula {afiliado.cedula} · {cupoUsado} de {LIMITE_BENEFICIARIOS_POR_ANIO} cupos usados en {anioActual}
+              Titular, cédula {afiliado.cedula} · {cupoUsado} de {limite} cupos usados en {anioActual}
               {adicionales > 0 && ` · ${adicionales} adicional(es) (+${formatoPesos(adicionales * VALOR_BENEFICIARIO_ADICIONAL)}/mes)`}
             </p>
           </div>
@@ -282,14 +283,14 @@ export default function PanelBeneficiarios({ afiliado, onCerrar }: Props) {
             );
           })}
 
-          {cupoUsado < LIMITE_BENEFICIARIOS_POR_ANIO ? (
+          {cupoUsado < limite ? (
             <button onClick={() => setBeneficiarios((prev) => [...prev, { nombre: "", parentesco: "", cedula: "" }])} className="flex items-center gap-1.5 text-sm text-vino-700 hover:underline">
               <Plus size={14} /> Agregar beneficiario
             </button>
           ) : (
             <div className="space-y-1">
               <p className="text-xs text-amber-700">
-                Ya se usaron los {LIMITE_BENEFICIARIOS_POR_ANIO} cupos de este año. Puedes agregar uno adicional pagando {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan, o registrar el retiro de alguno.
+                Ya se usaron los {limite} cupos de este año. Puedes agregar uno adicional pagando {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}/mes aparte del plan, o registrar el retiro de alguno.
               </p>
               <button
                 onClick={() => setBeneficiarios((prev) => [...prev, { nombre: "", parentesco: "", cedula: "", requierePago: true }])}
