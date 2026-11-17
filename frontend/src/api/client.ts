@@ -8,7 +8,7 @@ import {
   sendPasswordResetEmail,
   User,
 } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
@@ -69,7 +69,7 @@ import type { CambiarEstadoFacturacionInput, ActualizarTipoPagoInput } from "../
 // ============================================================
 // Pagos (mensualidad de afiliados)
 // ============================================================
-import type { RegistrarPagoInput, Pago, ActualizarPagoInput } from "../types";
+import type { RegistrarPagoInput, Pago, ActualizarPagoInput, GuardarSeguroVidaInput, CrearTitularSeguroInput } from "../types";
 
 // ============================================================
 // Reportes
@@ -100,7 +100,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Si la red (proxy, antivirus, datos móviles) corta la conexión en tiempo real,
+// Firestore cambia solo a long polling para que las tablas sigan actualizándose.
+export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 const functions = getFunctions(app);
 export const storage = getStorage(app);
 
@@ -295,6 +297,11 @@ export async function actualizarInventario(input: ActualizarInventarioInput): Pr
 // Bóvedas
 // ============================================================
 
+export async function eliminarBoveda(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarBovedaFn");
+  await fn({ id });
+}
+
 export async function registrarBoveda(input: RegistrarBovedaInput): Promise<Boveda> {
   const fn = httpsCallable<RegistrarBovedaInput, { boveda: Boveda }>(functions, "registrarBovedaFn");
   const res = await fn(input);
@@ -397,6 +404,40 @@ export async function listarPagosPorAfiliado(afiliadoId: string): Promise<Pago[]
   const fn = httpsCallable<{ afiliadoId: string }, { pagos: Pago[] }>(functions, "listarPagosPorAfiliadoFn");
   const res = await fn({ afiliadoId });
   return res.data.pagos;
+}
+
+// ============================================================
+// Seguro de vida (sus pagos van aparte de los del plan)
+// ============================================================
+
+export async function crearTitularSeguro(input: CrearTitularSeguroInput): Promise<Afiliado> {
+  const fn = httpsCallable<CrearTitularSeguroInput, { afiliado: Afiliado }>(functions, "crearTitularSeguroFn");
+  return (await fn(input)).data.afiliado;
+}
+
+export async function guardarSeguroVida(input: GuardarSeguroVidaInput): Promise<Afiliado> {
+  const fn = httpsCallable<GuardarSeguroVidaInput, { afiliado: Afiliado }>(functions, "guardarSeguroVidaFn");
+  return (await fn(input)).data.afiliado;
+}
+
+export async function registrarPagoSeguro(input: RegistrarPagoInput): Promise<Pago> {
+  const fn = httpsCallable<RegistrarPagoInput, { pago: Pago }>(functions, "registrarPagoSeguroFn");
+  return (await fn(input)).data.pago;
+}
+
+export async function actualizarPagoSeguro(input: ActualizarPagoInput): Promise<Pago> {
+  const fn = httpsCallable<ActualizarPagoInput, { pago: Pago }>(functions, "actualizarPagoSeguroFn");
+  return (await fn(input)).data.pago;
+}
+
+export async function eliminarPagoSeguro(id: string): Promise<void> {
+  const fn = httpsCallable<{ id: string }, { ok: boolean }>(functions, "eliminarPagoSeguroFn");
+  await fn({ id });
+}
+
+export async function listarPagosSeguro(afiliadoId: string): Promise<Pago[]> {
+  const fn = httpsCallable<{ afiliadoId: string }, { pagos: Pago[] }>(functions, "listarPagosSeguroFn");
+  return (await fn({ afiliadoId })).data.pagos;
 }
 
 // ============================================================

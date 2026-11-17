@@ -1,4 +1,5 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
@@ -19,10 +20,12 @@ import { UBICACIONES_POR_SEDE, ubicacionDe } from "../types";
 import { PARENTESCOS } from "../utils/parentescos";
 import { limiteBeneficiariosDelPlan, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
 import { normalizarCedula } from "../utils/cedula";
+import CamposSeguroVida, { leerSeguroDeForm } from "../components/CamposSeguroVida";
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
 
   const [termino, setTermino] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -41,6 +44,7 @@ export default function Afiliados() {
   const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
   const [sedeForm, setSedeForm] = useState<string>("");
   const [planForm, setPlanForm] = useState<string>("");
+  const [conSeguroForm, setConSeguroForm] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<"todos" | Afiliado["estadoPlan"]>("todos");
 
   useEffect(() => {
@@ -64,20 +68,21 @@ export default function Afiliados() {
       ? query(base, orderBy("nombreCompleto"))
       : query(base, where("sede", "==", sedeSeleccionada), orderBy("nombreCompleto"));
     const unsub = onSnapshot(q, (snap) => {
-      setAfiliados(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Afiliado)));
-      setCargando(false);
-    }, (err) => console.error("Error en la consulta:", err));
+      // Los titulares que solo tienen seguro de vida se manejan en la página Seguros de vida.
+      setAfiliados(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Afiliado)).filter((a) => !a.soloSeguro));
+      carga.listo();
+    }, (err) => carga.fallo(err));
     return unsub;
-  }, [sedeSeleccionada]);
+  }, [sedeSeleccionada, carga.intento]);
 
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
   const conteo = {
     activo: afiliados.filter((a) => a.estadoPlan === "activo").length,
     "en mora": afiliados.filter((a) => a.estadoPlan === "en mora").length,
     inactivo: afiliados.filter((a) => a.estadoPlan === "inactivo").length,
   };
-  const limitePlan = (planId: string) => limiteBeneficiariosDelPlan(planes.find((p) => p.id === planId)?.nombre);
-  const limiteNuevo = limitePlan(planForm);
+  const limitePlan = (planId: string, sede: string | undefined) => limiteBeneficiariosDelPlan(planes.find((p) => p.id === planId)?.nombre, sede);
+  const limiteNuevo = limitePlan(planForm, rol === "admin" ? sedeForm : sedeAsignada ?? undefined);
   const adicionalesNuevos = beneficiariosNuevo.filter((b, i) => i >= limiteNuevo && b.adicional && b.nombre.trim()).length;
   const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
@@ -127,7 +132,7 @@ export default function Afiliados() {
     try {
       await crearAfiliado({
         nombreCompleto: String(form.get("nombreCompleto")),
-        cedula: String(form.get("cedula")),
+        cedula: String(form.get("cedula") ?? "").trim(),
         numeroContrato: String(form.get("numeroContrato")),
         planId: String(form.get("planId")),
         sede: (rol === "admin" ? String(form.get("sede")) : sedeAsignada) as Sede,
@@ -136,11 +141,13 @@ export default function Afiliados() {
         fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         ubicacion: String(form.get("ubicacion") || "") || undefined,
         beneficiarios,
-        tieneSeguroVida: form.get("tieneSeguroVida") === "on",
+        tieneSeguroVida: conSeguroForm,
+        seguroVida: conSeguroForm ? leerSeguroDeForm(form, true) : undefined,
       });
       setMostrarFormulario(false);
       setBeneficiariosNuevo([]);
       setPlanForm("");
+      setConSeguroForm(false);
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el afiliado.");
@@ -165,11 +172,11 @@ export default function Afiliados() {
       {/* Búsqueda rápida: "¿esta persona tiene plan?" — por titular o beneficiario */}
       <form onSubmit={manejarBusqueda} className="flex gap-2">
         <div className="relative flex-1">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-tinta/40" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-tinta/70" />
           <input
             value={termino}
             onChange={(e) => setTermino(e.target.value)}
-            placeholder="Buscar por nombre o cédula (titular o beneficiario)…"
+            placeholder="Buscar por nombre o cédula (titular o beneficiario)…" aria-label="Buscar por nombre o cédula (titular o beneficiario)"
             className="w-full rounded-lg border border-vino-100 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-vino-400"
           />
         </div>
@@ -181,13 +188,13 @@ export default function Afiliados() {
         </button>
       </form>
 
-      {buscando && <p className="text-sm text-tinta/50">Buscando…</p>}
+      {buscando && <p className="text-sm text-tinta/70">Buscando…</p>}
 
       {resultadosBusqueda && !buscando && (
         <div className="space-y-3">
           {resultadosBusqueda.length === 0 ? (
             <div className="rounded-xl border border-vino-100 bg-white p-4">
-              <p className="text-sm text-tinta/60">Nadie con ese nombre o cédula tiene plan con nosotros.</p>
+              <p className="text-sm text-tinta/70">Nadie con ese nombre o cédula tiene plan con nosotros.</p>
             </div>
           ) : (
             resultadosBusqueda.map(({ persona, afiliado }) => (
@@ -233,7 +240,7 @@ export default function Afiliados() {
       <div className="grid grid-cols-3 gap-3">
         {(["activo", "en mora", "inactivo"] as const).map((estado) => (
           <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
-            <p className="text-xs capitalize text-tinta/50">{estado}</p>
+            <p className="text-xs capitalize text-tinta/70">{estado}</p>
             <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
           </div>
         ))}
@@ -244,7 +251,7 @@ export default function Afiliados() {
           <button
             key={p.valor}
             onClick={() => setFiltroEstado(p.valor)}
-            className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/60"}`}
+            className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/70"}`}
           >
             {p.etiqueta}
           </button>
@@ -254,9 +261,9 @@ export default function Afiliados() {
       {mostrarFormulario && (
         <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="nombreCompleto" required placeholder="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="cedula" required placeholder="Cédula (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <select name="planId" required value={planForm} onChange={(e) => setPlanForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+            <input name="nombreCompleto" required placeholder="Nombre completo" aria-label="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="cedula" placeholder="Cédula (opcional)" aria-label="Cédula (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <select aria-label="Plan" name="planId" required value={planForm} onChange={(e) => setPlanForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Plan…</option>
               {planes.map((p) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -264,16 +271,16 @@ export default function Afiliados() {
             </select>
             <input
               name="fechaAfiliacionReal"
-              type="date"
+              type="date" min="1900-01-01" max="2100-12-31"
               required
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
             />
-            <label className="block text-xs text-tinta/50 sm:col-span-2">Fecha de nacimiento (titular, opcional)</label>
-            <input name="fechaNacimiento" type="date" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <label className="block text-xs text-tinta/70 sm:col-span-2">Fecha de nacimiento (titular, opcional)</label>
+            <input name="fechaNacimiento" type="date" min="1900-01-01" max="2100-12-31" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <CampoPrecio name="valorCuotaMensual" required placeholder="Cuota mensual que paga" />
-            <input name="numeroContrato" required placeholder="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="numeroContrato" required placeholder="Número de contrato" aria-label="Número de contrato" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {rol === "admin" ? (
-              <select
+              <select aria-label="Sede"
                 name="sede"
                 required
                 value={sedeForm}
@@ -303,23 +310,24 @@ export default function Afiliados() {
               ))}
             </select>
             <label className="flex items-center gap-2 text-sm text-tinta/70">
-              <input type="checkbox" name="tieneSeguroVida" />
+              <input type="checkbox" checked={conSeguroForm} onChange={(e) => setConSeguroForm(e.target.checked)} />
               Tiene seguro de vida
             </label>
           </div>
+          {conSeguroForm && <CamposSeguroVida conPrimerPago />}
           <div className="space-y-2">
             <p className="text-sm font-medium text-vino-900">Beneficiarios (opcional)</p>
             {beneficiariosNuevo.map((b, i) => (
               <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-vino-50 p-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem] sm:border-0 sm:p-0">
-                <input placeholder="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <select value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm">
+                <input placeholder="Nombre" aria-label="Nombre" value={b.nombre} onChange={(e) => actualizarBeneficiarioNuevo(i, "nombre", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <select aria-label="Parentesco" value={b.parentesco} onChange={(e) => actualizarBeneficiarioNuevo(i, "parentesco", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm">
                   <option value="">Parentesco…</option>
                   {PARENTESCOS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
-                <input placeholder="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <input type="date" value={b.fechaNacimiento ?? ""} onChange={(e) => actualizarBeneficiarioNuevo(i, "fechaNacimiento", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
-                  <Trash2 size={16} className="mx-auto" />
+                <input placeholder="Cédula" aria-label="Cédula" value={b.cedula} onChange={(e) => actualizarBeneficiarioNuevo(i, "cedula", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <input type="date" min="1900-01-01" max="2100-12-31" value={b.fechaNacimiento ?? ""} onChange={(e) => actualizarBeneficiarioNuevo(i, "fechaNacimiento", e.target.value)} className="rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                <button aria-label="Eliminar" type="button" onClick={() => setBeneficiariosNuevo((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1">
+                  <Trash2 size={16} className="mx-auto" aria-hidden="true" />
                 </button>
                 {i >= limiteNuevo && (
                   <label className="col-span-2 flex items-center gap-2 text-xs text-amber-700 sm:col-span-5">
@@ -340,12 +348,12 @@ export default function Afiliados() {
                 : "Agregar beneficiario"}
             </button>
             {adicionalesNuevos > 0 && (
-              <p className="text-xs text-tinta/50">
+              <p className="text-xs text-tinta/70">
                 Se sumarán {formatoPesos(adicionalesNuevos * VALOR_BENEFICIARIO_ADICIONAL)} a la cuota mensual por {adicionalesNuevos} beneficiario(s) adicional(es).
               </p>
             )}
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
             disabled={guardando}
@@ -356,6 +364,7 @@ export default function Afiliados() {
         </form>
       )}
 
+      <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
           { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto, orden: (a: Afiliado) => a.nombreCompleto },
@@ -373,7 +382,7 @@ export default function Afiliados() {
                   ? "bg-green-50 text-green-700"
                   : a.estadoPlan === "en mora"
                     ? "bg-amber-50 text-amber-700"
-                    : "bg-tinta/5 text-tinta/60"
+                    : "bg-tinta/5 text-tinta/70"
                   }`}
               >
                 {a.estadoPlan}
@@ -392,9 +401,9 @@ export default function Afiliados() {
             encabezado: "Acciones",
             render: (a: Afiliado) => (
               <div className="flex gap-2">
-                <button onClick={() => setAfiliadoEditando(a)} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
+                <button aria-label="Editar" onClick={() => setAfiliadoEditando(a)} className="text-vino-700 hover:underline"><Pencil size={14} aria-hidden="true" /></button>
                 {rol === "admin" && (
-                  <button onClick={() => manejarEliminarAfiliado(a)} className="text-red-600 hover:underline"><Trash2 size={14} /></button>
+                  <button aria-label="Eliminar" onClick={() => manejarEliminarAfiliado(a)} className="text-red-600 hover:underline"><Trash2 size={14} aria-hidden="true" /></button>
                 )}
               </div>
             ),
@@ -424,7 +433,7 @@ export default function Afiliados() {
       />
       {afiliadoServicios && <PanelHistorialServicios afiliado={afiliadoServicios} onCerrar={() => setAfiliadoServicios(null)} />}
       {afiliadoEditando && <PanelEditarAfiliado afiliado={afiliadoEditando} planes={planes} onCerrar={() => setAfiliadoEditando(null)} />}
-      {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} limite={limitePlan(afiliadoBeneficiarios.planId)} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
+      {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} limite={limitePlan(afiliadoBeneficiarios.planId, afiliadoBeneficiarios.sede)} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
       {afiliadoPagos && <PanelPagos afiliado={afiliadoPagos} onCerrar={() => setAfiliadoPagos(null)} />}
     </div>
   );

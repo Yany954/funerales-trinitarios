@@ -1,4 +1,5 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { Flower2, Pencil, Trash2 } from "lucide-react";
 import { db, crearFlor, actualizarFlor, eliminarFlor } from "../api/client";
@@ -12,7 +13,8 @@ import ImagenAmpliable from "../components/ImagenAmpliable";
 
 export default function Flores() {
   const [flores, setFlores] = useState<Flor[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState<Flor | null>(null);
   const [fotoURL, setFotoURL] = useState("");
@@ -22,10 +24,10 @@ export default function Flores() {
   useEffect(() => {
     return onSnapshot(
       query(collection(db, "flores")),
-      (snap) => { setFlores(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Flor))); setCargando(false); },
-      (err) => console.error("Error cargando flores:", err)
+      (snap) => { setFlores(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Flor))); carga.listo(); },
+      (err) => carga.fallo(err)
     );
-  }, []);
+  }, [carga.intento]);
 
   function abrirParaCrear() {
     setEditando(null);
@@ -89,18 +91,18 @@ export default function Flores() {
         <form onSubmit={manejarGuardar} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
           <p className="text-sm font-medium text-vino-900">{editando ? `Editando: ${editando.nombre}` : "Nueva flor"}</p>
           <div className="grid gap-3 sm:grid-cols-3">
-            <input name="nombre" required defaultValue={editando?.nombre} placeholder="Nombre (ej. Ramo pequeño)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="nombre" required defaultValue={editando?.nombre} placeholder="Nombre (ej. Ramo pequeño)" aria-label="Nombre (ej. Ramo pequeño)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <CampoPrecio name="precioCosto" required valorInicial={editando?.precioCosto} placeholder="Precio costo" />
             <CampoPrecio name="precioPublico" required valorInicial={editando?.precioPublico} placeholder="Precio público" />
           </div>
           <SubirFoto carpeta="flores" valorActual={editando?.fotoURL} onSubido={setFotoURL} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={guardando} className="rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar flor"}
             </button>
             {editando && (
-              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/60">
+              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">
                 Cancelar
               </button>
             )}
@@ -108,6 +110,7 @@ export default function Flores() {
         </form>
       )}
 
+      <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
           {
@@ -121,8 +124,8 @@ export default function Flores() {
             encabezado: "Acciones",
             render: (f: Flor) => (
               <div className="flex gap-2">
-                <button onClick={() => abrirParaEditar(f)} className="text-vino-700 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Pencil size={18} /></button>
-                <button onClick={() => manejarEliminar(f)} className="text-red-600 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Trash2 size={18} /></button>
+                <button aria-label="Editar" onClick={() => abrirParaEditar(f)} className="text-vino-700 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Pencil size={18} aria-hidden="true" /></button>
+                <button aria-label="Eliminar" onClick={() => manejarEliminar(f)} className="text-red-600 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Trash2 size={18} aria-hidden="true" /></button>
               </div>
             ),
           },

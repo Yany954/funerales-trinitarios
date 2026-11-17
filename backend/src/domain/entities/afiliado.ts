@@ -26,9 +26,32 @@ export interface Afiliado {
   ultimoPago: UltimoPago | null;
   tieneSeguroVida: boolean;
   aseguradora?: string;
+  seguroVida?: SeguroVida;
+  /** Titular que solo tiene seguro de vida (sin plan exequial): no aparece en Afiliados ni en la búsqueda de cubiertos. */
+  soloSeguro?: boolean;
   observaciones?: string;
   periodoCubiertoHasta?: string | null;
   metadata: MetadataCambio;
+}
+
+/** Beneficiario del seguro de vida (hasta 10, independientes de los del plan). */
+export interface BeneficiarioSeguro {
+  nombre: string;
+  parentesco: string;
+  cedula?: string;
+  edad?: number; // opcional, sin límite
+  porcentaje: number; // parte de la indemnización; entre todos suman 100
+}
+
+/** Seguro de vida: lo paga el titular, aparte de la cuota del plan, con sus propios pagos. */
+export interface SeguroVida {
+  precioMensual: number;
+  valorIndemnizacion: number;
+  beneficiarios: BeneficiarioSeguro[];
+  fechaInicio: Date; // fecha de inicio de vigencia; marca el día de corte de cada mes
+  estado: "activo" | "en mora";
+  periodoCubiertoHasta?: string | null;
+  ultimoPago?: UltimoPago | null;
 }
 
 /** Documento indexado en personas_cubiertas — un registro por titular + uno por cada beneficiario. */

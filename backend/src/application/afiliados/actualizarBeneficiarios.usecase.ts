@@ -7,6 +7,7 @@ import {
   contarBeneficiariosQueOcupanCupo,
 } from "../../domain/value-objects/cupo-beneficiarios";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
+import { parsearFechaValida } from "../../domain/value-objects/fecha";
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
 export interface ActualizarBeneficiariosInput {
   afiliadoId: string;
@@ -15,11 +16,7 @@ export interface ActualizarBeneficiariosInput {
 
 function parsearFecha(valor: string | undefined): Date | undefined {
   if (!valor) return undefined;
-  const fecha = new Date(valor);
-  if (isNaN(fecha.getTime())) {
-    throw new Error(`Fecha de nacimiento inválida: "${valor}". Usa el formato aaaa-mm-dd.`);
-  }
-  return fecha;
+  return parsearFechaValida(valor, "fecha de nacimiento");
 }
 
 export async function actualizarBeneficiarios(

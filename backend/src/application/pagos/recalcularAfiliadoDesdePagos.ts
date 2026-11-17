@@ -4,6 +4,14 @@ import { estadoSegunMora, periodoMasReciente } from "../../domain/value-objects/
 import { AfiliadosRepository } from "../ports/afiliados.repository";
 import { PagosRepository } from "../ports/pagos.repository";
 
+/** Recalcula el estado de quien recibe los pagos (el plan o el seguro de vida). */
+export type Recalcular = (
+  afiliadosRepo: AfiliadosRepository,
+  pagosRepo: PagosRepository,
+  afiliadoId: string,
+  metadata: MetadataCambio
+) => Promise<void>;
+
 export async function recalcularAfiliadoDesdePagos(
   afiliadosRepo: AfiliadosRepository,
   pagosRepo: PagosRepository,

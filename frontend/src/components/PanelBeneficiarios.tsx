@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDialogo } from "../hooks/useDialogo";
 import { X, Plus, Trash2, HeartCrack, UserMinus, Undo2, Save } from "lucide-react";
 import {
   actualizarBeneficiarios,
@@ -85,6 +86,19 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
     }
   }
 
+  async function quitarFila(i: number, b: Beneficiario) {
+    // Las filas que ya están guardadas piden confirmación; las nuevas se quitan directo.
+    if (b.fechaAdicion) {
+      const ok = await confirmarAccion(
+        "¿Quitar este beneficiario?",
+        `${b.nombre || "El beneficiario"} se eliminará del afiliado al presionar "Guardar". Si se retiró, usa mejor "Registrar retiro" para conservar el historial.`,
+        "Sí, quitar"
+      );
+      if (!ok) return;
+    }
+    setBeneficiarios((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   function identificador(b: Beneficiario) {
     return { afiliadoId: afiliado.id, cedulaBeneficiario: b.cedula ?? "", nombreBeneficiario: b.nombre };
   }
@@ -140,24 +154,25 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
     ejecutar(() => deshacerNovedadBeneficiario({ ...identificador(b), quitar }));
   }
 
+  const refDialogo = useDialogo(onCerrar);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-5">
+      <div ref={refDialogo} role="dialog" aria-modal="true" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg text-vino-900">Beneficiarios — {afiliado.nombreCompleto}</h3>
-            <p className="text-xs text-tinta/50">
+            <p className="text-xs text-tinta/70">
               Titular, cédula {afiliado.cedula} · {cupoUsado} de {limite} cupos usados en {anioActual}
               {adicionales > 0 && ` · ${adicionales} adicional(es) (+${formatoPesos(adicionales * VALOR_BENEFICIARIO_ADICIONAL)}/mes)`}
             </p>
           </div>
-          <button onClick={onCerrar} className="text-tinta/40 hover:text-tinta">
-            <X size={20} />
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="rounded-lg p-1 text-tinta/70 hover:text-tinta">
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         <div className="space-y-3">
-          {beneficiarios.length === 0 && <p className="text-sm text-tinta/50">Este afiliado todavía no tiene beneficiarios.</p>}
+          {beneficiarios.length === 0 && <p className="text-sm text-tinta/70">Este afiliado todavía no tiene beneficiarios.</p>}
 
           {beneficiarios.map((b, i) => {
             const retirado = estaRetirado(b);
@@ -169,24 +184,24 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
                 className={`rounded-lg border p-3 ${b.fallecido ? "border-red-100 bg-red-50/30" : retirado ? "border-amber-100 bg-amber-50/30" : "border-vino-100"}`}
               >
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_9rem_2rem]">
-                  <input placeholder="Nombre" value={b.nombre} disabled={bloqueado} onChange={(e) => actualizarFila(i, "nombre", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
-                  <select value={b.parentesco} disabled={bloqueado} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50">
+                  <input placeholder="Nombre" aria-label="Nombre" value={b.nombre} disabled={bloqueado} onChange={(e) => actualizarFila(i, "nombre", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                  <select aria-label="Parentesco" value={b.parentesco} disabled={bloqueado} onChange={(e) => actualizarFila(i, "parentesco", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50">
                     <option value="">Parentesco…</option>
                     {PARENTESCOS.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                     {b.parentesco && !(PARENTESCOS as readonly string[]).includes(b.parentesco) && <option value={b.parentesco}>{b.parentesco}</option>}
                   </select>
-                  <input placeholder="Cédula (opcional)" value={b.cedula ?? ""} disabled={bloqueado} onChange={(e) => actualizarFila(i, "cedula", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
-                  <input type="date" value={aInputDate(b.fechaNacimiento)} disabled={bloqueado} onChange={(e) => actualizarFila(i, "fechaNacimiento", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                  <input placeholder="Cédula (opcional)" aria-label="Cédula (opcional)" value={b.cedula ?? ""} disabled={bloqueado} onChange={(e) => actualizarFila(i, "cedula", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
+                  <input type="date" min="1900-01-01" max="2100-12-31" value={aInputDate(b.fechaNacimiento)} disabled={bloqueado} onChange={(e) => actualizarFila(i, "fechaNacimiento", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm disabled:bg-vino-50" />
                   {!bloqueado && (
-                    <button onClick={() => setBeneficiarios((prev) => prev.filter((_, idx) => idx !== i))} className="flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:text-transparent">
+                    <button onClick={() => quitarFila(i, b)} className="flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:text-transparent">
                       <Trash2 size={16} className="shrink-0" /> <span className="sm:hidden">Quitar beneficiario</span>
                     </button>
                   )}
                 </div>
 
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-tinta/50">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-tinta/70">
                   {b.fechaAdicion ? <span>Ingreso: {formatoFecha(b.fechaAdicion)}</span> : null}
                   {b.fechaNacimiento ? <span>Edad: {calcularEdad(b.fechaNacimiento)} años</span> : null}
                   {b.adicional && guardado ? (
@@ -224,7 +239,7 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
                 </div>
 
                 {!!b.novedades?.length && (
-                  <div className={`mt-1.5 space-y-0.5 text-xs ${retirado ? "text-amber-700" : "text-tinta/50"}`}>
+                  <div className={`mt-1.5 space-y-0.5 text-xs ${retirado ? "text-amber-700" : "text-tinta/70"}`}>
                     {b.novedades.map((n, k) => (
                       <p key={k} className="flex flex-wrap items-center gap-1">
                         <UserMinus size={12} />
@@ -243,14 +258,14 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
                 {abierto?.i === i && abierto.modo === "fallecimiento" && (
                   <div className="mt-2 space-y-2 rounded-lg bg-vino-50 p-3">
                     <p className="text-xs font-medium text-vino-900">Novedad de fallecimiento</p>
-                    {b.adicional && <p className="text-xs text-tinta/50">La cuota mensual bajará {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.</p>}
-                    <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
+                    {b.adicional && <p className="text-xs text-tinta/70">La cuota mensual bajará {formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.</p>}
+                    <input type="date" min="1900-01-01" max="2100-12-31" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
                     <SubirDocumento carpeta={`afiliados/${afiliado.sede}/${afiliado.id}`} documentos={certificadoURL} onCambiar={setCertificadoURL} />
                     <div className="flex gap-2">
                       <button onClick={() => confirmarFallecimiento(b)} disabled={procesando} className="rounded-lg bg-vino-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-vino-600 disabled:opacity-60">
                         {procesando ? "Guardando…" : "Confirmar"}
                       </button>
-                      <button onClick={() => setAbierto(null)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-xs text-tinta/60">Cancelar</button>
+                      <button onClick={() => setAbierto(null)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-xs text-tinta/70">Cancelar</button>
                     </div>
                   </div>
                 )}
@@ -260,9 +275,9 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
                     <p className="text-xs font-medium text-vino-900">
                       Novedad: {retirado ? "INGRESO (vuelve a ser beneficiario)" : "RETIRO (deja de ser beneficiario)"}
                     </p>
-                    <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
-                    <input placeholder="Motivo (opcional, ej. separación)" value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
-                    <p className="text-xs text-tinta/50">
+                    <input type="date" min="1900-01-01" max="2100-12-31" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-auto" />
+                    <input placeholder="Motivo (opcional, ej. separación)" aria-label="Motivo (opcional, ej. separación)" value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm" />
+                    <p className="text-xs text-tinta/70">
                       {b.adicional
                         ? retirado
                           ? `La cuota mensual subirá ${formatoPesos(VALOR_BENEFICIARIO_ADICIONAL)}.`
@@ -275,7 +290,7 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
                       <button onClick={() => confirmarNovedad(b)} disabled={procesando} className="rounded-lg bg-vino-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-vino-600 disabled:opacity-60">
                         {procesando ? "Guardando…" : "Confirmar"}
                       </button>
-                      <button onClick={() => setAbierto(null)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-xs text-tinta/60">Cancelar</button>
+                      <button onClick={() => setAbierto(null)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-xs text-tinta/70">Cancelar</button>
                     </div>
                   </div>
                 )}
@@ -302,7 +317,7 @@ export default function PanelBeneficiarios({ afiliado, limite, onCerrar }: Props
           )}
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
         <button onClick={guardar} disabled={guardando} className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
           <Save size={16} />
           {guardando ? "Guardando…" : "Guardar cambios en la lista"}

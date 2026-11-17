@@ -1,6 +1,7 @@
 export { actualizarInventarioFn } from "./admin-api/inventario";
 export { crearAfiliadoFn, actualizarAfiliadoFn, eliminarAfiliadoFn, buscarPersonaCubiertaFn, actualizarBeneficiariosFn, registrarFallecimientoBeneficiarioFn, registrarNovedadBeneficiarioFn, deshacerNovedadBeneficiarioFn, reindexarPersonasCubiertasFn } from "./admin-api/afiliados";
 export { actualizarEstadosBovedasFn } from "./scheduled/actualizar-estados-bovedas";
+export { registrarBovedaFn, listarBovedasPorEstadoFn, eliminarBovedaFn } from "./admin-api/bovedas";
 export { crearItemBovedaFn, actualizarItemBovedaFn, eliminarItemBovedaFn } from "./admin-api/item-boveda";
 export { registrarServicioFn, actualizarServicioFn, cambiarEstadoFacturacionFn, eliminarServicioFn, listarServiciosPorAfiliadoFn, actualizarTipoPagoFn } from "./admin-api/servicios";
 export { crearConvenioFn, actualizarConvenioFn, guardarTarifaFn, duplicarTarifaFn } from "./admin-api/convenios";
@@ -10,6 +11,7 @@ export { crearFlorFn, actualizarFlorFn, eliminarFlorFn } from "./admin-api/flore
 export { generarReporteFn, generarReporteMensualFn } from "./admin-api/reportes";
 export { registrarPagoFn, listarPagosPorAfiliadoFn, actualizarPagoFn, eliminarPagoFn } from "./admin-api/pagos";
 export { actualizarEstadosMoraFn } from "./scheduled/actualizar-estados-mora";
+export { crearTitularSeguroFn, guardarSeguroVidaFn, registrarPagoSeguroFn, listarPagosSeguroFn, actualizarPagoSeguroFn, eliminarPagoSeguroFn } from "./admin-api/seguros";
 export {
   crearUsuarioFn,
   listarUsuariosFn,

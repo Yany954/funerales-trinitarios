@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db, Timestamp } from "./admin";
-import { Afiliado, Beneficiario, PersonaCubierta } from "../../domain/entities/afiliado";
+import { Afiliado, Beneficiario, PersonaCubierta, SeguroVida } from "../../domain/entities/afiliado";
 import { AfiliadosRepository } from "../../application/ports/afiliados.repository";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
@@ -18,6 +18,29 @@ function palabrasDeNombre(nombre: string): string[] {
     .filter(Boolean);
 }
 
+function seguroAFirestore(s: SeguroVida) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { beneficiario: _viejo, ...resto } = s as SeguroVida & { beneficiario?: unknown };
+  return {
+    ...resto,
+    fechaInicio: Timestamp.fromDate(s.fechaInicio),
+    ultimoPago: s.ultimoPago ? { ...s.ultimoPago, fecha: Timestamp.fromDate(s.ultimoPago.fecha) } : null,
+  };
+}
+
+function seguroDeFirestore(s: any): SeguroVida | undefined {
+  if (!s) return undefined;
+  const aFecha = (v: any) => (v?.toDate ? v.toDate() : v);
+  // Antes había un solo beneficiario (sin porcentaje): se lee como uno con el 100 %.
+  const beneficiarios = Array.isArray(s.beneficiarios)
+    ? s.beneficiarios
+    : s.beneficiario
+      ? [{ ...s.beneficiario, porcentaje: 100 }]
+      : [];
+  const { beneficiario: _viejo, ...resto } = s;
+  return { ...resto, beneficiarios, fechaInicio: aFecha(s.fechaInicio), ultimoPago: s.ultimoPago ? { ...s.ultimoPago, fecha: aFecha(s.ultimoPago.fecha) } : null };
+}
+
 /** Convierte fechas JS <-> Timestamp de Firestore al escribir. */
 function aFirestore(afiliado: Omit<Afiliado, "id">) {
   return {
@@ -33,6 +56,7 @@ function aFirestore(afiliado: Omit<Afiliado, "id">) {
     ultimoPago: afiliado.ultimoPago
       ? { ...afiliado.ultimoPago, fecha: Timestamp.fromDate(afiliado.ultimoPago.fecha) }
       : null,
+    seguroVida: afiliado.seguroVida ? seguroAFirestore(afiliado.seguroVida) : undefined,
     metadata: { ...afiliado.metadata, fecha: Timestamp.fromDate(afiliado.metadata.fecha) },
   };
 }
@@ -59,6 +83,7 @@ function deFirestore(id: string, data: FirebaseFirestore.DocumentData): Afiliado
     fechaNacimiento: data.fechaNacimiento?.toDate ? data.fechaNacimiento.toDate() : data.fechaNacimiento,
     ultimoPago: data.ultimoPago ? { ...data.ultimoPago, fecha: data.ultimoPago.fecha.toDate() } : null,
     beneficiarios: (data.beneficiarios ?? []).map(convertirBeneficiario),
+    seguroVida: seguroDeFirestore(data.seguroVida),
     metadata: { ...data.metadata, fecha: data.metadata.fecha.toDate() },
   } as Afiliado;
 }
@@ -112,6 +137,7 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     if (cambios.fechaAfiliacionReal) datos.fechaAfiliacionReal = Timestamp.fromDate(cambios.fechaAfiliacionReal);
     if (cambios.fechaNacimiento) datos.fechaNacimiento = Timestamp.fromDate(cambios.fechaNacimiento);
     if ("ubicacion" in cambios) datos.vereda = FieldValue.delete(); // migra el nombre viejo del campo
+    if (cambios.seguroVida) datos.seguroVida = seguroAFirestore(cambios.seguroVida);
     if (cambios.ultimoPago) datos.ultimoPago = { ...cambios.ultimoPago, fecha: Timestamp.fromDate(cambios.ultimoPago.fecha) };
     await db.collection(AFILIADOS).doc(id).update(datos);
     const doc = await db.collection(AFILIADOS).doc(id).get();
@@ -130,6 +156,8 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
 
   async sincronizarPersonasCubiertas(afiliado: Afiliado): Promise<void> {
     const batch = db.batch();
+    // Quien solo tiene seguro de vida no está cubierto por un plan exequial: no se indexa.
+    if (afiliado.soloSeguro) return;
 
     const titularRef = db.collection(PERSONAS_CUBIERTAS).doc(`titular_${afiliado.id}`);
     const titular: Omit<PersonaCubierta, "id"> = {

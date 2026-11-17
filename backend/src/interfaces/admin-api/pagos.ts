@@ -36,6 +36,12 @@ export const registrarPagoFn = onCall<RegistrarPagoInput>(async (request) => {
 
 export const listarPagosPorAfiliadoFn = onCall<{ afiliadoId: string }>(async (request) => {
   requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    const afiliado = await afiliadosRepo.obtenerPorId(request.data.afiliadoId);
+    if (!afiliado || afiliado.sede !== request.auth?.token.sede) {
+      throw new HttpsError("permission-denied", "No puedes ver pagos de otra sede.");
+    }
+  }
   const pagos = await listarPagosPorAfiliado(pagosRepo, request.data.afiliadoId);
   return { pagos: pagos.map(serializarPago) };
 });

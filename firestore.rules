@@ -3,7 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function estaAutenticado() { return request.auth != null; }
+    // Solo cuentas creadas por un administrador (tienen rol). Una cuenta que
+    // alguien registre por su cuenta, sin rol, no puede leer nada.
+    function estaAutenticado() {
+      return request.auth != null && request.auth.token.rol in ['admin', 'empleado'];
+    }
     function esAdmin() { return request.auth.token.rol == "admin"; }
     function miSede() { return request.auth.token.sede; }
 

@@ -1,7 +1,8 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where, Timestamp } from "firebase/firestore";
 import { Plus, Trash2, ClipboardList, Copy, Check, Pencil } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { db, registrarServicio, actualizarServicio, eliminarServicio } from "../api/client";
 import DataTable from "../components/DataTable";
 import SubirDocumento from "../components/SubirDocumento";
@@ -30,11 +31,15 @@ function aInputDate(valor: unknown): string {
 export default function Servicios() {
   const { rol, sedeAsignada, sedeSeleccionada, cargando: cargandoRol } = useRol();
   const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [cofres, setCofres] = useState<TipoCofre[]>([]);
   const [flores, setFlores] = useState<Flor[]>([]);
   const [idCopiado, setIdCopiado] = useState<string | null>(null);
+  // Viene de Bóvedas: /servicios?servicio=ID muestra solo ese servicio.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const servicioEnfocado = searchParams.get("servicio");
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState<Servicio | null>(null);
@@ -57,10 +62,10 @@ export default function Servicios() {
       : query(base, where("sede", "==", sedeSeleccionada), orderBy("fechaServicio", "desc"));
     return onSnapshot(
       q,
-      (snap) => { setServicios(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Servicio))); setCargando(false); },
-      (err) => console.error("Error en la consulta:", err)
+      (snap) => { setServicios(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Servicio))); carga.listo(); },
+      (err) => carga.fallo(err)
     );
-  }, [sedeSeleccionada, cargandoRol]);
+  }, [sedeSeleccionada, cargandoRol, carga.intento]);
 
   useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
   useEffect(() => onSnapshot(query(collection(db, "tipos_cofre")), (s) => setCofres(s.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre)))), []);
@@ -75,7 +80,7 @@ export default function Servicios() {
     );
   }, [convenioIdForm]);
 
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
 
   function copiarId(id: string) {
     navigator.clipboard.writeText(id);
@@ -225,10 +230,10 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             {editando ? `Editando servicio de ${editando.fallecido.nombreCompleto}` : "Nuevo servicio"}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="fechaServicio" type="date" required defaultValue={editando ? aInputDate(editando.fechaServicio) : undefined} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="fechaServicio" type="date" min="1900-01-01" max="2100-12-31" required defaultValue={editando ? aInputDate(editando.fechaServicio) : undefined} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {!editando && (
               rol === "admin" ? (
-                <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+                <select aria-label="Sede" name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                   <option value="">Sede…</option>
                   {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -236,9 +241,9 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
                 <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
               )
             )}
-            <input name="fallecidoNombre" required defaultValue={editando?.fallecido.nombreCompleto} placeholder="Nombre del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="fallecidoCedula" required defaultValue={editando?.fallecido.cedula} placeholder="Cédula del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <select name="convenioId" defaultValue={editando?.convenioId} onChange={(e) => setConvenioIdForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+            <input name="fallecidoNombre" required defaultValue={editando?.fallecido.nombreCompleto} placeholder="Nombre del fallecido" aria-label="Nombre del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="fallecidoCedula" required defaultValue={editando?.fallecido.cedula} placeholder="Cédula del fallecido" aria-label="Cédula del fallecido" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <select aria-label="Sin convenio (afiliado/particular)" name="convenioId" defaultValue={editando?.convenioId} onChange={(e) => setConvenioIdForm(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Sin convenio (afiliado/particular)</option>
               {convenios.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -246,7 +251,7 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
                 </option>
               ))}
             </select>
-            <select name="tipoServicio" required defaultValue={editando?.tipoServicio} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+            <select aria-label="Tipo de servicio" name="tipoServicio" required defaultValue={editando?.tipoServicio} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="">Tipo de servicio…</option>
               <option value="traslado">Traslado</option>
               <option value="servicio completo">Servicio completo</option>
@@ -268,7 +273,7 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
               Es un servicio para un afiliado
             </label>
             {esAfiliadoForm && (
-              <input name="cedulaTitular" required defaultValue={editando?.cedulaTitular} placeholder="Cédula del titular del plan" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+              <input name="cedulaTitular" required defaultValue={editando?.cedulaTitular} placeholder="Cédula del titular del plan" aria-label="Cédula del titular del plan" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             )}
 
             <label className="flex items-center gap-2 text-sm text-tinta/70">
@@ -287,7 +292,7 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <select
+            <select aria-label="+ Agregar cofre del catálogo"
               defaultValue=""
               onChange={(e) => { if (e.target.value) agregarDesdeCofre(e.target.value); e.target.value = ""; }}
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
@@ -295,7 +300,7 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
               <option value="">+ Agregar cofre del catálogo…</option>
               {cofres.map((c) => <option key={c.id} value={c.id}>{c.referencia} — {formatoPesos(c.precio)}</option>)}
             </select>
-            <select
+            <select aria-label="+ Agregar flores del catálogo"
               defaultValue=""
               onChange={(e) => { if (e.target.value) agregarDesdeFlor(e.target.value); e.target.value = ""; }}
               className="rounded-lg border border-vino-100 px-3 py-2 text-sm"
@@ -309,7 +314,7 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             defaultValue=""
             onChange={(e) => { if (e.target.value) agregarDesdeTarifa(e.target.value as keyof TarifaConvenio); e.target.value = ""; }}
             disabled={!tarifaConvenio}
-            className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50 disabled:text-tinta/40"
+            className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm disabled:bg-vino-50 disabled:text-tinta/70"
           >
             <option value="">{tarifaConvenio ? "+ Agregar de la tarifa del convenio…" : "Elige un convenio arriba para ver su tarifa"}</option>
             {tarifaConvenio && OPCIONES_TARIFA.filter((o) => tarifaConvenio[o.campo] !== undefined).map((o) => (
@@ -319,14 +324,14 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-vino-900">Ítems del servicio</p>
-            <p className="text-xs text-tinta/50">
+            <p className="text-xs text-tinta/70">
               El precio de cofres/flores/tarifa se llena solo — edita "Valor unit." abajo si necesitas un valor distinto. La bóveda se agrega aparte, arriba.
             </p>
             {items.map((item, i) => (
               <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-vino-50 p-2 sm:flex sm:items-center sm:border-0 sm:p-0">
-                <input placeholder="Concepto" value={item.concepto} onChange={(e) => actualizarItem(i, "concepto", e.target.value)} className="col-span-2 w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:col-span-1 sm:w-auto sm:flex-[2]" />
-                <input type="number" min={1} placeholder="Cant." value={item.cantidad} onChange={(e) => actualizarItem(i, "cantidad", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-20" />
-                <input type="number" min={0} placeholder="Valor unit." value={item.valorUnitario || ""} onChange={(e) => actualizarItem(i, "valorUnitario", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-28" />
+                <input placeholder="Concepto" aria-label="Concepto" value={item.concepto} onChange={(e) => actualizarItem(i, "concepto", e.target.value)} className="col-span-2 w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:col-span-1 sm:w-auto sm:flex-[2]" />
+                <input type="number" min={1} placeholder="Cant." aria-label="Cant" value={item.cantidad} onChange={(e) => actualizarItem(i, "cantidad", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-20" />
+                <input type="number" min={0} placeholder="Valor unit." aria-label="Valor unit" value={item.valorUnitario || ""} onChange={(e) => actualizarItem(i, "valorUnitario", e.target.value)} className="w-full rounded-lg border border-vino-100 px-2 py-1.5 text-sm sm:w-28" />
                 <button type="button" onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))} className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-red-600 hover:bg-red-50 sm:col-span-1 sm:w-8 sm:py-0 sm:text-transparent">
                   <Trash2 size={16} className="shrink-0" /> <span className="sm:hidden">Quitar</span>
                 </button>
@@ -345,16 +350,16 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             </div>
           )}
           {!editando && (
-            <p className="text-xs text-tinta/50">Los documentos se adjuntan después de guardar — usa "Editar" en la lista para subirlos.</p>
+            <p className="text-xs text-tinta/70">Los documentos se adjuntan después de guardar — usa "Editar" en la lista para subirlos.</p>
           )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={guardando} className="rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar servicio"}
             </button>
             {editando && (
-              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/60">
+              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">
                 Cancelar
               </button>
             )}
@@ -362,12 +367,25 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
         </form>
       )}
 
+      {servicioEnfocado && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-vino-100 bg-vino-50/60 px-4 py-2.5 text-sm text-vino-900">
+          <span>
+            Mostrando solo el servicio <span className="font-mono text-xs">{servicioEnfocado.slice(0, 8)}…</span> (el de la bóveda).
+            {!cargando && !servicios.some((s) => s.id === servicioEnfocado) && " No se encontró: puede que haya sido eliminado o que sea de otra sede (revisa el filtro de sede)."}
+          </span>
+          <button onClick={() => setSearchParams({})} className="font-medium text-vino-700 hover:underline">
+            Ver todos los servicios
+          </button>
+        </div>
+      )}
+
+      <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
           {
             encabezado: "ID",
             render: (s: Servicio) => (
-              <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
+              <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/70 hover:text-vino-700">
                 {s.id.slice(0, 8)}…
                 {idCopiado === s.id ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
               </button>
@@ -395,22 +413,22 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
               s.documentosAdjuntos?.length ? (
                 <a href={s.documentosAdjuntos[0]} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver ({s.documentosAdjuntos.length})</a>
               ) : (
-                <span className="text-xs text-tinta/40">—</span>
+                <span className="text-xs text-tinta/70">—</span>
               ),
           },
           {
             encabezado: "",
             render: (s: Servicio) => (
               <div className="flex gap-2">
-                <button onClick={() => abrirParaEditar(s)} className="text-vino-700 hover:underline"><Pencil size={14} /></button>
+                <button aria-label="Editar" onClick={() => abrirParaEditar(s)} className="text-vino-700 hover:underline"><Pencil size={14} aria-hidden="true" /></button>
                 {rol === "admin" && (
-                  <button onClick={() => manejarEliminar(s)} className="text-red-600 hover:underline"><Trash2 size={14} /></button>
+                  <button aria-label="Eliminar" onClick={() => manejarEliminar(s)} className="text-red-600 hover:underline"><Trash2 size={14} aria-hidden="true" /></button>
                 )}
               </div>
             ),
           },
         ]}
-        filas={servicios}
+        filas={servicioEnfocado ? servicios.filter((s) => s.id === servicioEnfocado) : servicios}
         cargando={cargando}
         claveFila={(s) => s.id}
         vacioTitulo="Todavía no hay servicios registrados"

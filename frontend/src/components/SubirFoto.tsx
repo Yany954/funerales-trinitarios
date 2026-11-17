@@ -33,9 +33,10 @@ export default function SubirFoto({ carpeta, valorActual, onSubido }: Props) {
           <button
             type="button"
             onClick={() => { setPreview(null); onSubido(""); }}
-            className="absolute -right-2 -top-2 rounded-full border border-vino-100 bg-white p-0.5 text-tinta/50 shadow"
+            aria-label="Quitar foto"
+            className="absolute -right-2 -top-2 rounded-full border border-vino-100 bg-white p-0.5 text-tinta/70 shadow"
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -49,7 +50,7 @@ export default function SubirFoto({ carpeta, valorActual, onSubido }: Props) {
         {subiendo ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
         {subiendo ? "Subiendo…" : preview ? "Cambiar foto" : "Tomar foto o elegir de galería"}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }

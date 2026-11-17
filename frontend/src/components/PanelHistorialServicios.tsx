@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDialogo } from "../hooks/useDialogo";
 import { X, Copy, Check } from "lucide-react";
 import { listarServiciosPorAfiliado } from "../api/client";
 import { formatoPesos, formatoFecha } from "../utils/formato";
@@ -27,33 +28,34 @@ export default function PanelHistorialServicios({ afiliado, onCerrar }: Props) {
     setTimeout(() => setIdCopiado(null), 1500);
   }
 
+  const refDialogo = useDialogo(onCerrar);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5">
+      <div ref={refDialogo} role="dialog" aria-modal="true" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg text-vino-900">Servicios — {afiliado.nombreCompleto}</h3>
-            <p className="text-xs text-tinta/50">Cédula titular {afiliado.cedula}</p>
+            <p className="text-xs text-tinta/70">Cédula titular {afiliado.cedula}</p>
           </div>
-          <button onClick={onCerrar} className="text-tinta/40 hover:text-tinta"><X size={20} /></button>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="rounded-lg p-1 text-tinta/70 hover:text-tinta"><X size={20} aria-hidden="true" /></button>
         </div>
 
         {cargando ? (
-          <p className="text-sm text-tinta/50">Cargando…</p>
+          <p className="text-sm text-tinta/70">Cargando…</p>
         ) : servicios.length === 0 ? (
-          <p className="text-sm text-tinta/50">Este afiliado todavía no tiene servicios registrados.</p>
+          <p className="text-sm text-tinta/70">Este afiliado todavía no tiene servicios registrados.</p>
         ) : (
           <ul className="divide-y divide-vino-50">
             {servicios.map((s) => (
               <li key={s.id} className="space-y-1 py-2.5 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-vino-900">{formatoFecha(s.fechaServicio)} — {s.sede}</span>
-                  <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
+                  <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/70 hover:text-vino-700">
                     {s.id.slice(0, 8)}…
                     {idCopiado === s.id ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
                   </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-tinta/60">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-tinta/70">
                   <span>{s.tipoServicio}</span>
                   <span>· {formatoPesos(s.valorTotal)}</span>
                   <span className={`rounded-full px-2 py-0.5 ${

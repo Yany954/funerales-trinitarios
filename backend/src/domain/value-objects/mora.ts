@@ -30,34 +30,42 @@ function diasEnMes(anio: number, mes0: number): number {
   return new Date(Date.UTC(anio, mes0 + 1, 0)).getUTCDate();
 }
 
+/** Fecha de hoy en Colombia como "aaaa-mm-dd" (el servidor corre en UTC). */
+export function hoyEnColombia(hoy: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(hoy);
+}
+
+function aClave(anio: number, mes0: number, dia: number): string {
+  return `${anio}-${String(mes0 + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
 /**
- * Cada mes pagado cubre hasta el mismo día de la afiliación del mes siguiente.
- * Sin pagos, cuenta como cubierto el mes de la afiliación.
- * Afiliado el 20/06 con agosto pagado → próximo vencimiento 20/09.
+ * Último día cubierto (inclusive), como "aaaa-mm-dd".
+ * Sin pagos solo cubre el mismo día de la afiliación: si no paga ese día o antes, queda en mora.
+ * Cada mes pagado cubre hasta el mismo día del mes siguiente.
+ * Afiliado el 17/10 con octubre pagado → cubierto hasta el 17/11; el 18/11 queda en mora.
  */
-export function proximoVencimiento(fechaAfiliacionReal: Date, periodoCubiertoHasta?: string): Date {
-  const dia = fechaAfiliacionReal.getUTCDate();
-  let anio = fechaAfiliacionReal.getUTCFullYear();
-  let mes = fechaAfiliacionReal.getUTCMonth();
+export function cubiertoHasta(fechaInicio: Date, periodoCubiertoHasta?: string): string {
+  const dia = fechaInicio.getUTCDate();
+  const anioInicio = fechaInicio.getUTCFullYear();
+  const mesInicio = fechaInicio.getUTCMonth();
 
   if (periodoCubiertoHasta) {
     const [a, m] = periodoCubiertoHasta.split("-").map(Number);
-    if (a * 12 + (m - 1) > anio * 12 + mes) {
-      anio = a;
-      mes = m - 1;
+    if (a * 12 + (m - 1) >= anioInicio * 12 + mesInicio) {
+      let anio = a;
+      let mes = m; // el mes siguiente al pagado (0-based: m - 1 + 1)
+      if (mes > 11) {
+        mes = 0;
+        anio += 1;
+      }
+      return aClave(anio, mes, Math.min(dia, diasEnMes(anio, mes)));
     }
   }
-
-  mes += 1;
-  if (mes > 11) {
-    mes = 0;
-    anio += 1;
-  }
-  return new Date(Date.UTC(anio, mes, Math.min(dia, diasEnMes(anio, mes))));
+  return aClave(anioInicio, mesInicio, dia);
 }
 
-/** 1 día de gracia después del vencimiento; pasado ese día queda en mora. */
-export function estadoSegunMora(fechaAfiliacionReal: Date, periodoCubiertoHasta?: string, hoy: Date = new Date()): "activo" | "en mora" {
-  const limite = proximoVencimiento(fechaAfiliacionReal, periodoCubiertoHasta).getTime() + 24 * 60 * 60 * 1000;
-  return hoy.getTime() > limite ? "en mora" : "activo";
+/** Sin días de gracia: el día siguiente al último día cubierto ya queda en mora. */
+export function estadoSegunMora(fechaInicio: Date, periodoCubiertoHasta?: string, hoy: Date = new Date()): "activo" | "en mora" {
+  return hoyEnColombia(hoy) > cubiertoHasta(fechaInicio, periodoCubiertoHasta) ? "en mora" : "activo";
 }

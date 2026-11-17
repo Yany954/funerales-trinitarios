@@ -15,10 +15,11 @@ export function contarBeneficiariosQueOcupanCupo(beneficiarios: Beneficiario[], 
   }).length;
 }
 
-/** Cupos sin costo extra según el plan: el plan integral tiene 8, los demás 7. */
-export function limiteBeneficiariosDelPlan(nombrePlan: string | undefined): number {
-  const nombre = (nombrePlan ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  return nombre.includes("integral") ? LIMITE_BENEFICIARIOS_PLAN_INTEGRAL : LIMITE_BENEFICIARIOS_POR_ANIO;
+/** Cupos sin costo extra: el plan integral de la sede Pelaya tiene 8; todo lo demás, 7. */
+export function limiteBeneficiariosDelPlan(nombrePlan: string | undefined, sede: string | undefined): number {
+  const sinTildes = (t: string | undefined) => (t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const esIntegralPelaya = sinTildes(nombrePlan).includes("integral") && sinTildes(sede) === "pelaya";
+  return esIntegralPelaya ? LIMITE_BENEFICIARIOS_PLAN_INTEGRAL : LIMITE_BENEFICIARIOS_POR_ANIO;
 }
 
 /** Adicionales que hoy suman a la cuota (los retirados o fallecidos dejan de cobrarse). */

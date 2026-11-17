@@ -3,6 +3,8 @@ import { parsearPesosCOP, formatearPesosCOP } from "../utils/precio";
 
 interface Props {
   name: string;
+  /** Si se pasa, el campo se conecta a un <label htmlFor> visible (mejor que aria-label). */
+  id?: string;
   placeholder?: string;
   valorInicial?: number;
   required?: boolean;
@@ -15,7 +17,7 @@ interface Props {
  * ese `name`, así que ningún formulario que ya lo use necesita cambiar su
  * lógica de guardado — solo reemplazas el <input type="number"> por esto.
  */
-export default function CampoPrecio({ name, placeholder, valorInicial, required }: Props) {
+export default function CampoPrecio({ name, id, placeholder, valorInicial, required }: Props) {
   const [texto, setTexto] = useState(valorInicial ? formatearPesosCOP(valorInicial) : "");
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function CampoPrecio({ name, placeholder, valorInicial, required 
 
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-tinta/40">$</span>
+      <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-tinta/70">$</span>
       <input
         type="text"
         inputMode="numeric"
@@ -33,7 +35,9 @@ export default function CampoPrecio({ name, placeholder, valorInicial, required 
           const numero = parsearPesosCOP(e.target.value);
           setTexto(numero ? formatearPesosCOP(numero) : "");
         }}
+        id={id}
         placeholder={placeholder}
+        aria-label={id ? undefined : placeholder}
         required={required}
         className="w-full rounded-lg border border-vino-100 py-2 pl-6 pr-3 text-sm"
       />

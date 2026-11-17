@@ -40,7 +40,7 @@ export default function Inventario() {
     });
   }, [sedeActiva]);
 
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
 
   async function manejarActualizar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -86,17 +86,17 @@ export default function Inventario() {
 
       <form onSubmit={manejarActualizar} className="grid gap-3 rounded-xl border border-vino-100 bg-white p-4 sm:grid-cols-4">
         {rol === "admin" && (
-          <select value={sedeFormulario} onChange={(e) => setSedeFormulario(e.target.value)} required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+          <select aria-label="Sede a actualizar" value={sedeFormulario} onChange={(e) => setSedeFormulario(e.target.value)} required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
             <option value="">Sede a actualizar…</option>
             {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
-        <select name="tipoCofreId" required className={`rounded-lg border border-vino-100 px-3 py-2 text-sm ${rol === "admin" ? "sm:col-span-2" : "sm:col-span-3"}`}>
+        <select aria-label="Tipo de cofre" name="tipoCofreId" required className={`rounded-lg border border-vino-100 px-3 py-2 text-sm ${rol === "admin" ? "sm:col-span-2" : "sm:col-span-3"}`}>
           <option value="">Tipo de cofre…</option>
           {cofres.map((c) => <option key={c.id} value={c.id}>{c.referencia}</option>)}
         </select>
-        <input name="cantidadDisponible" type="number" min={0} required placeholder="Cantidad" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-        {error && <p className="text-sm text-red-600 sm:col-span-4">{error}</p>}
+        <input name="cantidadDisponible" type="number" min={0} required placeholder="Cantidad" aria-label="Cantidad" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+        {error && <p role="alert" className="text-sm text-red-600 sm:col-span-4">{error}</p>}
         <button type="submit" disabled={guardando} className="flex items-center justify-center gap-2 rounded-lg bg-buganvilla px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 sm:col-span-4">
           <Warehouse size={16} />
           {guardando ? "Guardando…" : "Actualizar cantidad"}

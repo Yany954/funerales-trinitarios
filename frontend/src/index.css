@@ -9,3 +9,37 @@ body {
 h1, h2, h3 {
   @apply font-display;
 }
+
+/* Accesibilidad: foco visible para teclado en todo el sitio (contraste ≥ 3:1). */
+:focus-visible {
+  outline: 2px solid #5E2138; /* vino-700 */
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+/* Placeholders legibles (tinta al 65 %), no el gris claro por defecto. */
+::placeholder {
+  color: rgb(43 37 48 / 0.65);
+  opacity: 1;
+}
+
+/* Que los elementos enfocados no queden tapados por el encabezado fijo de la tabla. */
+:focus {
+  scroll-margin-top: 4rem;
+}
+
+/* Respeta "reducir movimiento" del sistema operativo. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

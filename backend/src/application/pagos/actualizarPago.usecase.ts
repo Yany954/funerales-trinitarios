@@ -1,9 +1,10 @@
 import { Pago } from "../../domain/entities/pago";
+import { parsearFechaValida } from "../../domain/value-objects/fecha";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { claveDePeriodo } from "../../domain/value-objects/mora";
 import { PagosRepository } from "../ports/pagos.repository";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
-import { recalcularAfiliadoDesdePagos } from "./recalcularAfiliadoDesdePagos";
+import { recalcularAfiliadoDesdePagos, Recalcular } from "./recalcularAfiliadoDesdePagos";
 
 export interface ActualizarPagoInput {
   id: string;
@@ -18,7 +19,8 @@ export async function actualizarPago(
   pagosRepo: PagosRepository,
   afiliadosRepo: AfiliadosRepository,
   input: ActualizarPagoInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  recalcular: Recalcular = recalcularAfiliadoDesdePagos
 ): Promise<Pago> {
   const actual = await pagosRepo.obtenerPorId(input.id);
   if (!actual) throw new Error("Ese pago no existe.");
@@ -27,8 +29,7 @@ export async function actualizarPago(
   let fechaFinal = actual.fecha;
 
   if (input.fecha) {
-    const f = new Date(input.fecha);
-    if (isNaN(f.getTime())) throw new Error("La fecha del pago no es válida.");
+    const f = parsearFechaValida(input.fecha, "fecha del pago");
     cambios.fecha = f;
     fechaFinal = f;
   }
@@ -50,6 +51,6 @@ if (input.periodoCubierto) {
   if (input.comprobanteURL !== undefined) cambios.comprobanteURL = input.comprobanteURL;
   if (input.numeroRecibo !== undefined) cambios.numeroRecibo = (input.numeroRecibo ?? "").trim() || undefined;
   const actualizado = await pagosRepo.actualizar(input.id, cambios);
-  await recalcularAfiliadoDesdePagos(afiliadosRepo, pagosRepo, actual.afiliadoId, metadata);
+  await recalcular(afiliadosRepo, pagosRepo, actual.afiliadoId, metadata);
   return actualizado;
 }

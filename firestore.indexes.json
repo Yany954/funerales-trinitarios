@@ -64,7 +64,15 @@
     { "fieldPath": "afiliadoId", "order": "ASCENDING" },
     { "fieldPath": "fecha", "order": "DESCENDING" }
   ]
-}
+},
+    {
+      "collectionGroup": "pagos_seguro_vida",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "afiliadoId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

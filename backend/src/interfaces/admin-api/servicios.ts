@@ -63,7 +63,9 @@ export const eliminarServicioFn = onCall<{ id: string }>(async (request) => {
 
 export const listarServiciosPorAfiliadoFn = onCall<{ cedula: string }>(async (request) => {
   requireAuth(request);
-  const servicios = await listarServiciosPorCedulaTitular(repo, request.data.cedula);
+  const todos = await listarServiciosPorCedulaTitular(repo, request.data.cedula);
+  const esAdmin = request.auth?.token.rol === "admin";
+  const servicios = esAdmin ? todos : todos.filter((s) => s.sede === request.auth?.token.sede);
   return { servicios: servicios.map((s) => ({ ...s, fechaServicio: s.fechaServicio.toISOString() })) };
 });
 

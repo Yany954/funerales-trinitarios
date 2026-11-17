@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDialogo } from "../hooks/useDialogo";
 import { X, FileCheck } from "lucide-react";
 import { cambiarEstadoFacturacion } from "../api/client";
 import SubirDocumento from "./SubirDocumento";
@@ -38,14 +39,15 @@ export default function PanelFacturacion({ servicio, convenio, onCerrar }: Props
     }
   }
 
+  const refDialogo = useDialogo(onCerrar);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5">
+      <div ref={refDialogo} role="dialog" aria-modal="true" className="w-full max-w-md rounded-xl bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg text-vino-900">Marcar como {siguienteEstado}</h3>
-          <button onClick={onCerrar} className="text-tinta/40 hover:text-tinta"><X size={20} /></button>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="rounded-lg p-1 text-tinta/70 hover:text-tinta"><X size={20} aria-hidden="true" /></button>
         </div>
-        <p className="mb-3 text-sm text-tinta/60">
+        <p className="mb-3 text-sm text-tinta/70">
           {servicio.fallecido.nombreCompleto} — {formatoPesos(servicio.valorTotal)}
           {convenio && ` — ${convenio.nombre}`}
         </p>
@@ -62,12 +64,12 @@ export default function PanelFacturacion({ servicio, convenio, onCerrar }: Props
           </div>
         )}
 
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-tinta/50">
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-tinta/70">
           <FileCheck size={13} />
           Puedes subir el archivo ahora o dejarlo para después — no es obligatorio para cambiar el estado.
         </p>
 
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
         <button onClick={confirmar} disabled={guardando} className="mt-4 w-full rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
           {guardando ? "Guardando…" : `Confirmar: marcar como ${siguienteEstado}`}
         </button>

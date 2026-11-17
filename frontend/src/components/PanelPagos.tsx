@@ -1,6 +1,16 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useDialogo } from "../hooks/useDialogo";
 import { X, Receipt, Pencil, Trash2 } from "lucide-react";
-import { listarPagosPorAfiliado, registrarPago, actualizarPago, eliminarPago } from "../api/client";
+import {
+  listarPagosPorAfiliado,
+  registrarPago,
+  actualizarPago,
+  eliminarPago,
+  listarPagosSeguro,
+  registrarPagoSeguro,
+  actualizarPagoSeguro,
+  eliminarPagoSeguro,
+} from "../api/client";
 import SubirFoto from "./SubirFoto";
 import CampoPrecio from "./CampoPrecio";
 import { useRol } from "../auth/RolContext";
@@ -10,15 +20,24 @@ import type { Afiliado, Pago } from "../types";
 import Swal from "sweetalert2";
 interface Props {
   afiliado: Afiliado;
+  /** "plan" = cuota del plan funerario; "seguro" = pagos del seguro de vida (van aparte). */
+  tipo?: "plan" | "seguro";
   onCerrar: () => void;
 }
+
+const API = {
+  plan: { listar: listarPagosPorAfiliado, registrar: registrarPago, actualizar: actualizarPago, eliminar: eliminarPago },
+  seguro: { listar: listarPagosSeguro, registrar: registrarPagoSeguro, actualizar: actualizarPagoSeguro, eliminar: eliminarPagoSeguro },
+};
 
 function aInputDate(valor: unknown): string {
   const fecha = new Date(valor as string);
   return isNaN(fecha.getTime()) ? "" : fecha.toISOString().slice(0, 10);
 }
 
-export default function PanelPagos({ afiliado, onCerrar }: Props) {
+export default function PanelPagos({ afiliado, tipo = "plan", onCerrar }: Props) {
+  const api = API[tipo];
+  const valorSugerido = tipo === "seguro" ? afiliado.seguroVida?.precioMensual : afiliado.valorCuotaMensual;
   const { rol } = useRol();
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -30,7 +49,7 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
 
   async function cargar() {
     try {
-      setPagos(await listarPagosPorAfiliado(afiliado.id));
+      setPagos(await api.listar(afiliado.id));
     } catch (err) {
       console.error("Error cargando pagos:", err);
     } finally {
@@ -81,9 +100,9 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
     }
     try {
       if (editando) {
-        await actualizarPago({ id: editando.id, ...datos });
+        await api.actualizar({ id: editando.id, ...datos });
       } else {
-        await registrarPago({ afiliadoId: afiliado.id, sede: afiliado.sede, ...datos });
+        await api.registrar({ afiliadoId: afiliado.id, sede: afiliado.sede, ...datos });
       }
       limpiarFormulario();
       await cargar();
@@ -98,7 +117,7 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
     const confirmado = await confirmarEliminar(`el pago de ${formatoPeriodo(p.periodoCubierto)}`);
     if (!confirmado) return;
     try {
-      await eliminarPago(p.id);
+      await api.eliminar(p.id);
       if (editando?.id === p.id) limpiarFormulario();
       await cargar();
     } catch (err) {
@@ -111,16 +130,17 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
     ? desglosarPeriodo(editando.periodoCubierto, editando.fecha)
     : { mes: hoy.getMonth() + 1, anio: hoy.getFullYear() };
 
+  const refDialogo = useDialogo(onCerrar);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5">
+      <div ref={refDialogo} role="dialog" aria-modal="true" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="font-display text-lg text-vino-900">Pagos — {afiliado.nombreCompleto}</h3>
-            <p className="text-xs text-tinta/50">Cédula {afiliado.cedula}</p>
+            <h3 className="font-display text-lg text-vino-900">{tipo === "seguro" ? "Pagos del seguro de vida" : "Pagos"} — {afiliado.nombreCompleto}</h3>
+            <p className="text-xs text-tinta/70">Cédula {afiliado.cedula}</p>
           </div>
-          <button onClick={onCerrar} className="text-tinta/40 hover:text-tinta">
-            <X size={20} />
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="rounded-lg p-1 text-tinta/70 hover:text-tinta">
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -128,11 +148,11 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
           <p className="text-sm font-medium text-vino-900">{editando ? "Editando pago" : "Nuevo pago"}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-tinta/50">Fecha en que pagó</label>
-              <input name="fecha" type="date" required defaultValue={editando ? aInputDate(editando.fecha) : ""} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+              <label className="mb-1 block text-xs text-tinta/70">Fecha en que pagó</label>
+              <input name="fecha" type="date" min="1900-01-01" max="2100-12-31" required defaultValue={editando ? aInputDate(editando.fecha) : ""} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-tinta/50">Mes que cubre el pago</label>
+              <label className="mb-1 block text-xs text-tinta/70">Mes que cubre el pago</label>
               <div className="flex gap-2">
                 <select name="mes" defaultValue={mes} className="flex-1 rounded-lg border border-vino-100 px-2 py-2 text-sm">
                   {MESES.map((n, idx) => (
@@ -143,25 +163,25 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
               </div>
             </div>
             <div className="sm:col-span-2">
-              <CampoPrecio name="valor" required placeholder="Valor pagado" valorInicial={editando?.valor ?? afiliado.valorCuotaMensual} />
+              <CampoPrecio name="valor" required placeholder="Valor pagado" valorInicial={editando?.valor ?? valorSugerido} />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-tinta/50">N° de recibo (opcional)</label>
-              <input name="numeroRecibo" defaultValue={editando?.numeroRecibo} placeholder="Ej. 1023" className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+              <label className="mb-1 block text-xs text-tinta/70">N° de recibo (opcional)</label>
+              <input name="numeroRecibo" defaultValue={editando?.numeroRecibo} placeholder="Ej. 1023" aria-label="Ej. 1023" className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             </div>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-tinta/50">Comprobante (opcional)</p>
-            <SubirFoto carpeta={`pagos/${afiliado.sede}/${afiliado.id}`} valorActual={editando?.comprobanteURL} onSubido={setComprobanteURL} />
+            <p className="text-xs text-tinta/70">Comprobante (opcional)</p>
+            <SubirFoto carpeta={`pagos/${tipo === "seguro" ? "seguro/" : ""}${afiliado.sede}/${afiliado.id}`} valorActual={editando?.comprobanteURL} onSubido={setComprobanteURL} />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={guardando} className="flex items-center gap-2 rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               <Receipt size={16} />
               {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar pago"}
             </button>
             {editando && (
-              <button type="button" onClick={limpiarFormulario} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/60">Cancelar</button>
+              <button type="button" onClick={limpiarFormulario} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">Cancelar</button>
             )}
           </div>
         </form>
@@ -169,16 +189,16 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
         <div className="mt-4 space-y-2">
           <p className="text-sm font-medium text-vino-900">Historial</p>
           {cargando ? (
-            <p className="text-sm text-tinta/50">Cargando…</p>
+            <p className="text-sm text-tinta/70">Cargando…</p>
           ) : pagos.length === 0 ? (
-            <p className="text-sm text-tinta/50">Todavía no hay pagos registrados.</p>
+            <p className="text-sm text-tinta/70">Todavía no hay pagos registrados.</p>
           ) : (
             <ul className="divide-y divide-vino-50">
               {pagos.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                   <div>
                     <p className="font-medium text-vino-900">{formatoPeriodo(p.periodoCubierto)} — {formatoPesos(p.valor)}</p>
-                    <p className="text-xs text-tinta/50">
+                    <p className="text-xs text-tinta/70">
                       Pagado el {formatoFecha(p.fecha)}{p.numeroRecibo ? ` — recibo N° ${p.numeroRecibo}` : ""}
                     </p>
                   </div>
@@ -186,9 +206,9 @@ export default function PanelPagos({ afiliado, onCerrar }: Props) {
                     {p.comprobanteURL && (
                       <a href={p.comprobanteURL} target="_blank" rel="noreferrer" className="rounded-lg px-2 py-1.5 text-xs text-vino-700 hover:bg-vino-50">Ver comprobante</a>
                     )}
-                    <button onClick={() => empezarEdicion(p)} className="rounded-lg p-2 text-vino-700 hover:bg-vino-50"><Pencil size={16} /></button>
+                    <button aria-label="Editar" onClick={() => empezarEdicion(p)} className="rounded-lg p-2 text-vino-700 hover:bg-vino-50"><Pencil size={16} aria-hidden="true" /></button>
                     {rol === "admin" && (
-                      <button onClick={() => manejarEliminar(p)} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
+                      <button aria-label="Eliminar" onClick={() => manejarEliminar(p)} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} aria-hidden="true" /></button>
                     )}
                   </div>
                 </li>

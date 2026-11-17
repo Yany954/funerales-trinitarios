@@ -86,6 +86,66 @@ export interface Afiliado {
   estadoPlan: "activo" | "inactivo" | "en mora";
   beneficiarios: Beneficiario[];
   tieneSeguroVida: boolean;
+  seguroVida?: SeguroVida;
+  /** Titular que solo tiene seguro de vida, sin plan exequial. */
+  soloSeguro?: boolean;
+}
+
+// ============================================================
+// Seguro de vida (lo paga el titular, aparte de la cuota del plan)
+// ============================================================
+
+/** El titular no puede tener más de esta edad al activar el seguro (los beneficiarios no tienen límite). */
+export const EDAD_MAXIMA_TITULAR_SEGURO = 80;
+export const MAXIMO_BENEFICIARIOS_SEGURO = 10;
+
+export interface BeneficiarioSeguro {
+  nombre: string;
+  parentesco: string;
+  cedula?: string;
+  edad?: number; // opcional, sin límite
+  porcentaje: number; // parte de la indemnización; entre todos suman 100
+}
+
+export interface SeguroVida {
+  precioMensual: number;
+  valorIndemnizacion: number;
+  beneficiarios?: BeneficiarioSeguro[];
+  /** @deprecated formato viejo (un solo beneficiario); usar beneficiariosDelSeguro(). */
+  beneficiario?: Omit<BeneficiarioSeguro, "porcentaje">;
+  fechaInicio: unknown; // fecha de inicio de vigencia
+  estado: "activo" | "en mora";
+  periodoCubiertoHasta?: string | null;
+}
+
+/** Lee los beneficiarios del seguro, incluido el formato viejo de un solo beneficiario (100 %). */
+export function beneficiariosDelSeguro(s?: SeguroVida): BeneficiarioSeguro[] {
+  if (!s) return [];
+  if (Array.isArray(s.beneficiarios)) return s.beneficiarios;
+  return s.beneficiario ? [{ ...s.beneficiario, porcentaje: 100 }] : [];
+}
+
+/** Datos del seguro que se envían desde un formulario. fechaPago solo al activarlo. */
+export interface SeguroVidaEntrada {
+  precioMensual: number;
+  valorIndemnizacion: number;
+  beneficiarios: BeneficiarioSeguro[];
+  fechaPago?: string; // al activarlo: fecha de inicio de vigencia (y del primer pago)
+  fechaInicio?: string; // solo al editar: fecha de inicio de vigencia
+}
+
+export interface GuardarSeguroVidaInput extends SeguroVidaEntrada {
+  afiliadoId: string;
+}
+
+/** Titular que solo tiene seguro de vida (sin plan exequial). */
+export interface CrearTitularSeguroInput {
+  nombreCompleto: string;
+  cedula?: string;
+  fechaNacimiento?: string;
+  sede: Sede;
+  ubicacion?: string;
+  seguroVida: SeguroVidaEntrada;
 }
 
 export interface CrearAfiliadoInput {
@@ -100,6 +160,7 @@ export interface CrearAfiliadoInput {
   valorCuotaMensual: number;
   beneficiarios: BeneficiarioEntrada[];
   tieneSeguroVida: boolean;
+  seguroVida?: SeguroVidaEntrada;
   aseguradora?: string;
   observaciones?: string;
 }

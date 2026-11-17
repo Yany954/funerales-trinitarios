@@ -23,6 +23,19 @@ export const registrarBovedaFn = onCall<RegistrarBovedaInput>(async (request) =>
 /** El dashboard (y en el futuro el bot de WhatsApp) llama esto para saber si alguien tiene plan. */
 export const listarBovedasPorEstadoFn = onCall<{ estado: EstadoBoveda }>(async (request) => {
   requireAuth(request);
-  const bovedas = await listarBovedasPorEstado(repo, request.data.estado);
+  const todas = await listarBovedasPorEstado(repo, request.data.estado);
+  const esAdmin = request.auth?.token.rol === "admin";
+  const bovedas = esAdmin ? todas : todas.filter((b) => b.sede === request.auth?.token.sede);
   return { bovedas };
+});
+
+/** Borra una bóveda registrada por error. Solo admin. */
+export const eliminarBovedaFn = onCall<{ id: string }>(async (request) => {
+  requireAuth(request);
+  if (request.auth?.token.rol !== "admin") {
+    throw new HttpsError("permission-denied", "Solo un administrador puede eliminar bóvedas.");
+  }
+  if (!request.data?.id) throw new HttpsError("invalid-argument", "Falta la bóveda a eliminar.");
+  await repo.eliminar(request.data.id);
+  return { ok: true };
 });

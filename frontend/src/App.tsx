@@ -50,24 +50,24 @@ function PantallaLogin() {
       <div className="w-full max-w-sm rounded-2xl bg-white p-8">
         <div className="mb-4 text-center">
           <h1 className="font-display text-2xl text-vino-900">Los Trinitarios</h1>
-          <p className="mt-1 text-sm text-tinta/60">Panel interno del staff</p>
+          <p className="mt-1 text-sm text-tinta/70">Panel interno del staff</p>
         </div>
 
         {modo === "login" ? (
           <form onSubmit={manejarLogin} className="space-y-4">
-            <input name="email" type="email" required placeholder="Correo" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
+            <input name="email" type="email" autoComplete="username" required placeholder="Correo" aria-label="Correo" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
             <div className="relative">
-              <input name="password" type={verContrasena ? "text" : "password"} required placeholder="Contraseña" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 pr-10 text-sm outline-none focus:border-vino-400" />
+              <input name="password" type={verContrasena ? "text" : "password"} autoComplete="current-password" required placeholder="Contraseña" aria-label="Contraseña" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 pr-10 text-sm outline-none focus:border-vino-400" />
               <button
                 type="button"
                 onClick={() => setVerContrasena((v) => !v)}
                 aria-label={verContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-tinta/40 hover:text-tinta"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-tinta/70 hover:text-tinta"
               >
                 {verContrasena ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={cargando} className="w-full rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {cargando ? "Entrando…" : "Entrar"}
             </button>
@@ -81,8 +81,8 @@ function PantallaLogin() {
           </form>
         ) : (
           <form onSubmit={manejarRecuperar} className="space-y-4">
-            <p className="text-sm text-tinta/60">Escribe tu correo y te mandamos un enlace para crear una contraseña nueva.</p>
-            <input name="email" type="email" required placeholder="Correo" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
+            <p className="text-sm text-tinta/70">Escribe tu correo y te mandamos un enlace para crear una contraseña nueva.</p>
+            <input name="email" type="email" autoComplete="username" required placeholder="Correo" aria-label="Correo" className="w-full rounded-lg border border-vino-100 px-3 py-2.5 text-sm outline-none focus:border-vino-400" />
             {mensaje && <p className="text-sm text-green-700">{mensaje}</p>}
             <button type="submit" disabled={cargando} className="w-full rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {cargando ? "Enviando…" : "Enviar enlace"}

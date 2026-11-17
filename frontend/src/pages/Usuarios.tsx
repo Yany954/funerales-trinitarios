@@ -87,7 +87,7 @@ export default function Usuarios() {
       {enlaceGenerado && (
         <div className="space-y-2 rounded-xl border border-vino-100 bg-vino-50 p-4">
           <p className="text-sm font-medium text-vino-900">Enlace de invitación para {enlaceGenerado.email}</p>
-          <p className="text-xs text-tinta/60">
+          <p className="text-xs text-tinta/70">
             Cópialo y envíaselo por WhatsApp — al abrirlo, la persona crea su propia contraseña. El enlace vence en 1 hora.
           </p>
           <div className="flex gap-2">
@@ -97,27 +97,27 @@ export default function Usuarios() {
               {copiado ? "Copiado" : "Copiar"}
             </button>
           </div>
-          <button onClick={() => setEnlaceGenerado(null)} className="text-xs text-tinta/50 hover:underline">Cerrar</button>
+          <button onClick={() => setEnlaceGenerado(null)} className="text-xs text-tinta/70 hover:underline">Cerrar</button>
         </div>
       )}
 
       {mostrarFormulario && (
         <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="nombre" required placeholder="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-            <input name="email" type="email" required placeholder="Correo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="nombre" required placeholder="Nombre completo" aria-label="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="email" type="email" required placeholder="Correo" aria-label="Correo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <select value={rolNuevo} onChange={(e) => setRolNuevo(e.target.value as "admin" | "empleado")} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
               <option value="empleado">Empleado</option>
               <option value="admin">Administrador</option>
             </select>
             {rolNuevo === "empleado" && (
-              <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+              <select aria-label="Sede" name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                 <option value="">Sede…</option>
                 {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             )}
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={guardando} className="rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
             {guardando ? "Creando…" : "Crear usuario y generar enlace"}
           </button>
@@ -145,7 +145,7 @@ export default function Usuarios() {
             encabezado: "Sede",
             render: (u: UsuarioListado) =>
               u.rol === "admin" ? (
-                <span className="text-xs text-tinta/50">Todas</span>
+                <span className="text-xs text-tinta/70">Todas</span>
               ) : (
                 <select
                   defaultValue={u.sede}
@@ -168,10 +168,10 @@ export default function Usuarios() {
             encabezado: "Acciones",
             render: (u: UsuarioListado) => (
               <div className="flex gap-2">
-                <button onClick={() => manejarReenviarEnlace(u.email)} title="Reenviar enlace" className="text-vino-700 hover:underline">
-                  <RotateCcw size={14} />
+                <button aria-label="Reenviar enlace" onClick={() => manejarReenviarEnlace(u.email)} title="Reenviar enlace" className="text-vino-700 hover:underline">
+                  <RotateCcw size={14} aria-hidden="true" />
                 </button>
-                <button onClick={() => manejarToggleEstado(u)} title={u.deshabilitado ? "Habilitar" : "Deshabilitar"} className="text-tinta/50 hover:text-red-600">
+                <button onClick={() => manejarToggleEstado(u)} title={u.deshabilitado ? "Habilitar" : "Deshabilitar"} className="text-tinta/70 hover:text-red-600">
                   <Ban size={14} />
                 </button>
               </div>

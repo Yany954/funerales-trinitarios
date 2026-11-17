@@ -10,5 +10,11 @@ export function requireAuth(request: CallableRequest): string {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión para hacer esto.");
   }
+  // Solo cuentas creadas por un administrador (tienen rol). Si alguien se
+  // registra por su cuenta con la API pública, no tiene rol y no puede hacer nada.
+  const rol = request.auth.token.rol;
+  if (rol !== "admin" && rol !== "empleado") {
+    throw new HttpsError("permission-denied", "Tu cuenta no tiene acceso. Pide a un administrador que te asigne un rol.");
+  }
   return request.auth.uid;
 }

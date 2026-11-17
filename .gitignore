@@ -3,3 +3,8 @@ node_modules/
 .firebase/
 .firebaserc
 emulator-data/
+# Exportaciones/datos del emulador: el emulador de Auth guarda las contraseñas en texto plano
+firebase-export-*/
+emulator-data/
+emulador-data/
+firestore-debug.log

@@ -1,9 +1,10 @@
 import { Pago } from "../../domain/entities/pago";
+import { parsearFechaValida } from "../../domain/value-objects/fecha";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { claveDePeriodo } from "../../domain/value-objects/mora";
 import { PagosRepository } from "../ports/pagos.repository";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
-import { recalcularAfiliadoDesdePagos } from "./recalcularAfiliadoDesdePagos";
+import { recalcularAfiliadoDesdePagos, Recalcular } from "./recalcularAfiliadoDesdePagos";
 
 export interface RegistrarPagoInput {
   afiliadoId: string;
@@ -19,10 +20,10 @@ export async function registrarPago(
   pagosRepo: PagosRepository,
   afiliadosRepo: AfiliadosRepository,
   input: RegistrarPagoInput,
-  metadata: MetadataCambio
+  metadata: MetadataCambio,
+  recalcular: Recalcular = recalcularAfiliadoDesdePagos
 ): Promise<Pago> {
-  const fecha = new Date(input.fecha);
-  if (isNaN(fecha.getTime())) throw new Error("La fecha del pago no es válida.");
+  const fecha = parsearFechaValida(input.fecha, "fecha del pago");
   if (!input.valor || input.valor <= 0) throw new Error("Ingresa el valor pagado.");
   const periodo = claveDePeriodo(input.periodoCubierto, fecha);
   if (!periodo) throw new Error("Elige el mes que cubre este pago.");
@@ -44,6 +45,6 @@ export async function registrarPago(
     metadata,
   });
 
-  await recalcularAfiliadoDesdePagos(afiliadosRepo, pagosRepo, input.afiliadoId, metadata);
+  await recalcular(afiliadosRepo, pagosRepo, input.afiliadoId, metadata);
   return pago;
 }

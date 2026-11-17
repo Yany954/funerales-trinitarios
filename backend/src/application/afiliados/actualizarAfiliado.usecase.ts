@@ -1,6 +1,7 @@
 import { Afiliado } from "../../domain/entities/afiliado";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
+import { parsearFechaValida } from "../../domain/value-objects/fecha";
 
 export interface ActualizarAfiliadoInput {
   id: string;
@@ -24,11 +25,11 @@ export async function actualizarAfiliado(
 ): Promise<Afiliado> {
 const { id, fechaAfiliacionReal, fechaNacimiento, ...resto } = input;
 const cambios: Partial<Omit<Afiliado, "id">> = { ...resto, metadata };
-if (fechaAfiliacionReal) cambios.fechaAfiliacionReal = new Date(fechaAfiliacionReal);
-if (fechaNacimiento) cambios.fechaNacimiento = new Date(fechaNacimiento);
+if (fechaAfiliacionReal) cambios.fechaAfiliacionReal = parsearFechaValida(fechaAfiliacionReal, "fecha de afiliación");
+if (fechaNacimiento) cambios.fechaNacimiento = parsearFechaValida(fechaNacimiento, "fecha de nacimiento");
 
   const actualizado = await repo.actualizar(id, cambios);
-  if (input.nombreCompleto || input.cedula) {
+  if ((input.nombreCompleto || input.cedula) && !actualizado.soloSeguro) {
     await repo.sincronizarPersonasCubiertas(actualizado);
   }
   return actualizado;

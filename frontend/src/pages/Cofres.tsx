@@ -1,4 +1,5 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { Package, Pencil, Trash2 } from "lucide-react";
 import { db, crearTipoCofre, actualizarTipoCofre, eliminarTipoCofre } from "../api/client";
@@ -15,7 +16,8 @@ const ETIQUETA_CATEGORIA: Record<CategoriaCofre, string> = { estandar: "Estánda
 
 export default function Cofres() {
   const [cofres, setCofres] = useState<TipoCofre[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState<TipoCofre | null>(null);
   const [categoriaForm, setCategoriaForm] = useState<CategoriaCofre>("estandar");
@@ -26,10 +28,10 @@ export default function Cofres() {
   useEffect(() => {
     return onSnapshot(
       query(collection(db, "tipos_cofre")),
-      (snap) => { setCofres(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre))); setCargando(false); },
-      (err) => console.error("Error cargando cofres:", err)
+      (snap) => { setCofres(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre))); carga.listo(); },
+      (err) => carga.fallo(err)
     );
-  }, []);
+  }, [carga.intento]);
 
   function abrirParaCrear() {
     setEditando(null);
@@ -98,8 +100,8 @@ export default function Cofres() {
       encabezado: "Acciones",
       render: (c: TipoCofre) => (
         <div className="flex gap-2">
-          <button onClick={() => abrirParaEditar(c)} className="text-vino-700 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Pencil size={18} /></button>
-          <button onClick={() => manejarEliminar(c)} className="text-red-600 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Trash2 size={18} /></button>
+          <button aria-label="Editar" onClick={() => abrirParaEditar(c)} className="text-vino-700 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Pencil size={18} aria-hidden="true" /></button>
+          <button aria-label="Eliminar" onClick={() => manejarEliminar(c)} className="text-red-600 rounded-lg p-2.5 hover:bg-vino-50 hover:underline"><Trash2 size={18} aria-hidden="true" /></button>
         </div>
       ),
     },
@@ -132,7 +134,7 @@ export default function Cofres() {
             </select>
 
             {categoriaForm !== "infantil" ? (
-              <select name="nivel" required defaultValue={editando?.nivel} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+              <select aria-label="Nivel" name="nivel" required defaultValue={editando?.nivel} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                 <option value="">Nivel…</option>
                 <option value="basico">Básico</option>
                 <option value="semilujo">Semilujo</option>
@@ -140,7 +142,7 @@ export default function Cofres() {
               </select>
             ) : (
               <div className="flex gap-2">
-                <input name="tamanoValor" type="number" step="0.01" required defaultValue={editando?.tamanoCm} placeholder="Tamaño" className="flex-1 rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+                <input name="tamanoValor" type="number" step="0.01" required defaultValue={editando?.tamanoCm} placeholder="Tamaño" aria-label="Tamaño" className="flex-1 rounded-lg border border-vino-100 px-3 py-2 text-sm" />
                 <select name="tamanoUnidad" defaultValue="cm" className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                   <option value="cm">cm</option>
                   <option value="m">m</option>
@@ -148,18 +150,18 @@ export default function Cofres() {
               </div>
             )}
 
-            <input name="referencia" required defaultValue={editando?.referencia} placeholder="Referencia" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="referencia" required defaultValue={editando?.referencia} placeholder="Referencia" aria-label="Referencia" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <CampoPrecio name="precio" required valorInicial={editando?.precio} placeholder="Precio" />
-            <input name="descripcion" defaultValue={editando?.descripcion} placeholder="Descripción (material, acabado)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
+            <input name="descripcion" defaultValue={editando?.descripcion} placeholder="Descripción (material, acabado)" aria-label="Descripción (material, acabado)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
           </div>
           <SubirFoto carpeta="cofres" valorActual={editando?.fotoURL} onSubido={setFotoURL} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={guardando} className="rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cofre"}
             </button>
             {editando && (
-              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/60">
+              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">
                 Cancelar
               </button>
             )}
@@ -167,6 +169,7 @@ export default function Cofres() {
         </form>
       )}
 
+      <AvisoCarga carga={carga} />
       <div className="space-y-3">
         <h3 className="font-display text-base text-vino-900">Cofres para adultos (estándar y ancho)</h3>
         <DataTable

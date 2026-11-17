@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Afiliados from "./pages/Afiliados";
+import SegurosVida from "./pages/SegurosVida";
 import Servicios from "./pages/Servicios";
 import Convenios from "./pages/Convenios";
 import Cofres from "./pages/Cofres";
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "afiliados", element: <Afiliados /> },
+      { path: "seguros-vida", element: <SegurosVida /> },
       { path: "servicios", element: <RutaSoloAdmin><Servicios /></RutaSoloAdmin> },
       { path: "convenios", element: <RutaSoloAdmin><Convenios /></RutaSoloAdmin> },
       { path: "inventario", element: <RutaSoloAdmin><Inventario /></RutaSoloAdmin> },

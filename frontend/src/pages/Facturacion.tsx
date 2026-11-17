@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { Copy, Check, FileText, CircleDollarSign, ArrowLeft } from "lucide-react";
 import { cambiarEstadoFacturacion, db } from "../api/client";
@@ -16,7 +17,8 @@ export default function Facturacion() {
 
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [idCopiado, setIdCopiado] = useState<string | null>(null);
   const [filtroConvenio, setFiltroConvenio] = useState("");
   const [servicioActivo, setServicioActivo] = useState<Servicio | null>(null);
@@ -35,12 +37,12 @@ export default function Facturacion() {
       : query(base, where("sede", "==", sedeActiva), orderBy("fechaServicio", "desc"));
     return onSnapshot(
       q,
-      (snap) => { setServicios(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Servicio))); setCargando(false); },
-      (err) => console.error("Error en la consulta:", err)
+      (snap) => { setServicios(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Servicio))); carga.listo(); },
+      (err) => carga.fallo(err)
     );
-  }, [sedeActiva, cargandoRol]);
+  }, [sedeActiva, cargandoRol, carga.intento]);
 
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
 
   function copiarId(id: string) {
     navigator.clipboard.writeText(id);
@@ -69,7 +71,7 @@ export default function Facturacion() {
       <h2 className="font-display text-lg text-vino-900">Facturación de servicios</h2>
 
       <div className="flex flex-wrap gap-2 rounded-xl border border-vino-100 bg-white p-3">
-        <select value={filtroConvenio} onChange={(e) => setFiltroConvenio(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-sm">
+        <select aria-label="Todos los convenios" value={filtroConvenio} onChange={(e) => setFiltroConvenio(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-1.5 text-sm">
           <option value="">Todos los convenios</option>
           {convenios.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
@@ -81,12 +83,13 @@ export default function Facturacion() {
         </select>
       </div>
 
+      <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
           {
             encabezado: "ID",
             render: (s: Servicio) => (
-              <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
+              <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/70 hover:text-vino-700">
                 {s.id.slice(0, 8)}…
                 {idCopiado === s.id ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
               </button>
@@ -114,7 +117,7 @@ export default function Facturacion() {
               s.facturaURL ? (
                 <a href={s.facturaURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver</a>
               ) : (
-                <span className="text-xs text-tinta/40">—</span>
+                <span className="text-xs text-tinta/70">—</span>
               ),
           },
           {
@@ -123,24 +126,24 @@ export default function Facturacion() {
               s.comprobantePagoURL ? (
                 <a href={s.comprobantePagoURL} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver</a>
               ) : (
-                <span className="text-xs text-tinta/40">—</span>
+                <span className="text-xs text-tinta/70">—</span>
               ),
           },
           {
             encabezado: "Acción",
             render: (s: Servicio) => {
               if (rol !== "admin") {
-                return <span className="text-xs text-tinta/40">Solo lectura</span>;
+                return <span className="text-xs text-tinta/70">Solo lectura</span>;
               }
               return (
                 <div className="flex items-center gap-2">
                   {s.estadoFacturacion !== "pendiente por facturar" && (
-                    <button onClick={() => manejarRetroceder(s)} title="Retroceder estado" className="rounded-lg p-1.5 text-tinta/50 hover:bg-vino-50 hover:text-vino-700">
-                      <ArrowLeft size={16} />
+                    <button aria-label="Retroceder estado" onClick={() => manejarRetroceder(s)} title="Retroceder estado" className="rounded-lg p-1.5 text-tinta/70 hover:bg-vino-50 hover:text-vino-700">
+                      <ArrowLeft size={16} aria-hidden="true" />
                     </button>
                   )}
                   {s.estadoFacturacion === "pagado" ? (
-                    <span className="text-xs text-tinta/40">Completo</span>
+                    <span className="text-xs text-tinta/70">Completo</span>
                   ) : (
                     <button onClick={() => setServicioActivo(s)} className="flex items-center gap-1 text-xs text-vino-700 hover:underline">
                       {s.estadoFacturacion === "pendiente por facturar" ? <FileText size={13} /> : <CircleDollarSign size={13} />}

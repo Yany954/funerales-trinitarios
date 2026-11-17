@@ -21,10 +21,10 @@ export default function Reportes() {
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        <button onClick={() => setPestaña("mensual")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "mensual" ? "bg-vino-700 text-white" : "bg-white text-tinta/60 border border-vino-100"}`}>
+        <button onClick={() => setPestaña("mensual")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "mensual" ? "bg-vino-700 text-white" : "bg-white text-tinta/70 border border-vino-100"}`}>
           Reporte mensual por sede
         </button>
-        <button onClick={() => setPestaña("porConvenio")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "porConvenio" ? "bg-vino-700 text-white" : "bg-white text-tinta/60 border border-vino-100"}`}>
+        <button onClick={() => setPestaña("porConvenio")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "porConvenio" ? "bg-vino-700 text-white" : "bg-white text-tinta/70 border border-vino-100"}`}>
           Facturación por Alcaldía / Convenio
         </button>
       </div>
@@ -75,7 +75,7 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-vino-100 bg-white p-4">
         <div>
-          <label className="mb-1 block text-xs text-tinta/50">Filtro</label>
+          <label className="mb-1 block text-xs text-tinta/70">Filtro</label>
           <select value={filtro} onChange={(e) => setFiltro(e.target.value as FiltroReporteMensual)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
             <option value="todos">Todos los servicios</option>
             <option value="convenioPendienteFacturar">Convenio pendiente de facturar</option>
@@ -84,7 +84,7 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
           </select>
         </div>
         <div>
-  <label className="mb-1 block text-xs text-tinta/50">Sede</label>
+  <label className="mb-1 block text-xs text-tinta/70">Sede</label>
   <select value={sedeReporte} onChange={(e) => setSedeReporte(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
     <option value="header">Usar selector de arriba ({sedeSeleccionada === "all" ? "Todas" : sedeSeleccionada})</option>
     <option value="all">Todas las sedes</option>
@@ -92,26 +92,26 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
   </select>
 </div>
         <div>
-          <label className="mb-1 block text-xs text-tinta/50">Desde</label>
-          <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label className="mb-1 block text-xs text-tinta/70">Desde</label>
+          <input type="date" min="1900-01-01" max="2100-12-31" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-tinta/50">Hasta</label>
-          <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label className="mb-1 block text-xs text-tinta/70">Hasta</label>
+          <input type="date" min="1900-01-01" max="2100-12-31" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
         </div>
         <button onClick={generar} disabled={generando} className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
           <BarChart3 size={16} />
           {generando ? "Generando…" : "Generar"}
         </button>
-        <p className="text-xs text-tinta/50">
+        <p className="text-xs text-tinta/70">
   Mostrando: {sedeEfectiva === "all" ? "todas las sedes" : sedeEfectiva}
 </p>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
       {filas && filas.length === 0 && (
-        <div className="rounded-xl border border-dashed border-vino-100 bg-white py-10 text-center text-sm text-tinta/50">
+        <div className="rounded-xl border border-dashed border-vino-100 bg-white py-10 text-center text-sm text-tinta/70">
           No hay servicios que coincidan con este filtro y rango de fechas.
         </div>
       )}
@@ -125,7 +125,7 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
                 <p className="text-sm text-vino-700">{formatoPesos(filasSede.reduce((s, f) => s + f.valorTotal, 0))}</p>
               </div>
               <table className="w-full text-left text-sm">
-                <thead className="text-xs text-tinta/50">
+                <thead className="text-xs text-tinta/70">
                   <tr>
                     <th className="px-4 py-2 font-medium">Fecha</th>
                     <th className="px-4 py-2 font-medium">Convenio</th>
@@ -207,10 +207,10 @@ function ReportePorConvenio() {
             <option value="">{filtroTipo === "alcaldia" ? "Alcaldía…" : "Convenio…"}</option>
             {opciones.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
-          <input name="fechaInicio" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-          <input name="fechaFin" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <input name="fechaInicio" type="date" min="1900-01-01" max="2100-12-31" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <input name="fechaFin" type="date" min="1900-01-01" max="2100-12-31" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <button type="submit" disabled={generando} className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
           <BarChart3 size={16} />
           {generando ? "Generando…" : "Generar reporte"}
@@ -220,7 +220,7 @@ function ReportePorConvenio() {
       {filas && (
         <div className="rounded-xl border border-vino-100 bg-white p-4">
           {filas.length === 0 ? (
-            <p className="text-sm text-tinta/60">No hay servicios pendientes por facturar en ese rango.</p>
+            <p className="text-sm text-tinta/70">No hay servicios pendientes por facturar en ese rango.</p>
           ) : (
             <>
               <ul className="divide-y divide-vino-50">

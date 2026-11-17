@@ -13,12 +13,14 @@ import {
   X,
   UserCog,
   Receipt,
+  ShieldCheck,
 } from "lucide-react";
 import { useRol } from "../auth/RolContext";
 
 const items = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, end: true, soloAdmin: false },
   { to: "/afiliados", label: "Afiliados", icon: Users, soloAdmin: false },
+  { to: "/seguros-vida", label: "Seguros de vida", icon: ShieldCheck, soloAdmin: false },
   { to: "/inventario", label: "Inventario", icon: Warehouse, soloAdmin: true },
   { to: "/servicios", label: "Servicios", icon: ClipboardList, soloAdmin: true },
   { to: "/facturacion", label: "Facturación", icon: Receipt, soloAdmin: true },
@@ -69,7 +71,7 @@ export default function Sidebar({ abiertoEnMovil, onCerrar }: Props) {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav aria-label="Menú principal" className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
            {itemsVisibles.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}

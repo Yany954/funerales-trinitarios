@@ -4,6 +4,7 @@ import { collection, onSnapshot, query, where, Timestamp } from "firebase/firest
 import { ArrowRight } from "lucide-react";
 import { db } from "../api/client";
 import { useRol } from "../auth/RolContext";
+import GaleriaGraficas from "../components/GaleriaGraficas";
 
 export default function Dashboard() {
   const { rol, sedeAsignada, sedeSeleccionada, cargando: cargandoRol } = useRol();
@@ -63,12 +64,12 @@ export default function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-vino-100 bg-white p-5">
-          <p className="text-sm text-tinta/50">Servicios este mes</p>
+          <p className="text-sm text-tinta/70">Servicios este mes</p>
           <p className="mt-1 font-display text-2xl text-vino-900">{serviciosMes === null ? "…" : serviciosMes}</p>
         </div>
 
         <Link to="/facturacion?estado=pendiente por facturar" className="group rounded-xl border border-vino-100 bg-white p-5 transition-colors hover:border-vino-400">
-        <p className="text-sm text-tinta/50">Pendiente por facturar</p>
+        <p className="text-sm text-tinta/70">Pendiente por facturar</p>
           <div className="mt-1 flex items-center justify-between">
             <p className="font-display text-2xl text-vino-900">{pendientesFacturar === null ? "…" : pendientesFacturar}</p>
             {!!pendientesFacturar && (
@@ -80,7 +81,7 @@ export default function Dashboard() {
         </Link>
 
         <Link to="/bovedas?estado=por vencer" className="group rounded-xl border border-vino-100 bg-white p-5 transition-colors hover:border-vino-400">
-          <p className="text-sm text-tinta/50">Bóvedas por vencer</p>
+          <p className="text-sm text-tinta/70">Bóvedas por vencer</p>
           <div className="mt-1 flex items-center justify-between">
             <p className="font-display text-2xl text-vino-900">{bovedasPorVencer === null ? "…" : bovedasPorVencer}</p>
             {!!bovedasPorVencer && (
@@ -91,6 +92,8 @@ export default function Dashboard() {
           </div>
         </Link>
       </div>
+
+      {rol === "admin" && sedeActiva && <GaleriaGraficas sede={sedeActiva} />}
     </div>
   );
 }

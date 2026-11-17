@@ -13,7 +13,7 @@
     "test": "echo \"agregar tests en /tests cuando el equipo lo necesite\" && exit 0"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "dependencies": {
     "firebase-admin": "^14.3.0",

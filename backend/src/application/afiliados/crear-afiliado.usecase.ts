@@ -1,4 +1,7 @@
 import { Afiliado, BeneficiarioEntrada } from "../../domain/entities/afiliado";
+import { parsearFechaValida } from "../../domain/value-objects/fecha";
+import { estadoSegunMora } from "../../domain/value-objects/mora";
+import { SeguroVidaEntrada, validarEdadTitularSeguro, validarSeguroVida } from "../seguros/seguroVida";
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { Sede } from "../../domain/value-objects/rol-usuario";
 import { AfiliadosRepository } from "../ports/afiliados.repository";
@@ -21,6 +24,8 @@ export interface CrearAfiliadoInput {
   valorCuotaMensual: number;
   beneficiarios: BeneficiarioEntrada[];
   tieneSeguroVida: boolean;
+  /** Obligatorio si tieneSeguroVida; lo guarda guardarSeguroVida después de crear el afiliado. */
+  seguroVida?: SeguroVidaEntrada;
   aseguradora?: string;
   observaciones?: string;
 }
@@ -35,14 +40,20 @@ export async function crearAfiliado(
   if (!input.numeroContrato?.trim()) throw new Error("El número de contrato es obligatorio.");
   if (!input.fechaAfiliacionReal) throw new Error("La fecha de afiliación es obligatoria.");
   if (!input.valorCuotaMensual || input.valorCuotaMensual <= 0) throw new Error("Ingresa el valor de la cuota mensual.");
+  if (input.tieneSeguroVida) validarSeguroVida(input.seguroVida, true);
 
+
+  const fechaAfiliacionReal = parsearFechaValida(input.fechaAfiliacionReal, "fecha de afiliación");
+  const fechaNacimiento = input.fechaNacimiento ? parsearFechaValida(input.fechaNacimiento, "fecha de nacimiento") : undefined;
+  // Se revisa antes de crear, para no dejar el afiliado creado sin el seguro que se pidió.
+  if (input.tieneSeguroVida) validarEdadTitularSeguro(fechaNacimiento);
 
   const ahora = new Date();
   const beneficiariosConFecha: Beneficiario[] = input.beneficiarios.map((b) => ({
     nombre: b.nombre,
     parentesco: b.parentesco,
     cedula: b.cedula,
-    fechaNacimiento: b.fechaNacimiento ? new Date(b.fechaNacimiento) : undefined,
+    fechaNacimiento: b.fechaNacimiento ? parsearFechaValida(b.fechaNacimiento, `fecha de nacimiento de ${b.nombre}`) : undefined,
     adicional: b.adicional || undefined,
     fechaAdicion: ahora,
   }));
@@ -59,14 +70,14 @@ export async function crearAfiliado(
     numeroContrato: input.numeroContrato,
     sede: input.sede,
     planId: input.planId,
-    fechaAfiliacionReal: new Date(input.fechaAfiliacionReal),
+    fechaAfiliacionReal,
     valorCuotaMensual: input.valorCuotaMensual + contarAdicionalesActivos(beneficiariosConFecha) * VALOR_BENEFICIARIO_ADICIONAL,
-    estadoPlan: "activo",
+    estadoPlan: estadoSegunMora(fechaAfiliacionReal), // sin pagos: en mora si la afiliación ya pasó
     fechaAfiliacion: ahora,
     beneficiarios: beneficiariosConFecha,
-    fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
+    fechaNacimiento,
     ultimoPago: null,
-    tieneSeguroVida: input.tieneSeguroVida,
+    tieneSeguroVida: false, // se activa con guardarSeguroVida, que además registra el primer pago
     aseguradora: input.aseguradora,
     observaciones: input.observaciones,
     ubicacion: input.ubicacion || undefined,

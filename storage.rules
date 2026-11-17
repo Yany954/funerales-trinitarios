@@ -3,7 +3,16 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function estaAutenticado() { return request.auth != null; }
+    // Solo cuentas creadas por un administrador (tienen rol). Una cuenta que
+    // alguien registre por su cuenta, sin rol, no puede leer nada.
+    function estaAutenticado() {
+      return request.auth != null && request.auth.token.rol in ['admin', 'empleado'];
+    }
+    // Los documentos que sube la app son fotos o PDF; nada de HTML, scripts, etc.
+    function esImagenOPdf() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType == 'application/pdf';
+    }
 
     // El control de acceso real vive en las Cloud Functions (admin-api),
     // no aquí. Storage solo exige estar autenticado — cualquier intento de
@@ -26,12 +35,14 @@ service firebase.storage {
     match /servicios/{allPaths=**} {
       allow read: if estaAutenticado();
       allow write: if estaAutenticado()
-        && request.resource.size < 15 * 1024 * 1024;
+        && request.resource.size < 15 * 1024 * 1024
+        && esImagenOPdf();
     }
     match /pagos/{allPaths=**} {
       allow read: if estaAutenticado();
       allow write: if estaAutenticado()
-        && request.resource.size < 15 * 1024 * 1024;
+        && request.resource.size < 15 * 1024 * 1024
+        && esImagenOPdf();
     }
 
     match /{allPaths=**} {
@@ -41,7 +52,8 @@ service firebase.storage {
     match /afiliados/{allPaths=**} {
       allow read: if estaAutenticado();
       allow write: if estaAutenticado()
-        && request.resource.size < 15 * 1024 * 1024;
+        && request.resource.size < 15 * 1024 * 1024
+        && esImagenOPdf();
     }
     match /{path=**}/historial/{anioId} {
   allow read: if estaAutenticado();

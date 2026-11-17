@@ -30,8 +30,8 @@ export default function SubirDocumento({ carpeta, documentos, onCambiar }: Props
               <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-vino-700 hover:underline">
                 <FileText size={14} /> Documento {i + 1}
               </a>
-              <button type="button" onClick={() => onCambiar(documentos.filter((_, idx) => idx !== i))} className="text-tinta/40 hover:text-red-600">
-                <X size={14} />
+              <button type="button" onClick={() => onCambiar(documentos.filter((_, idx) => idx !== i))} aria-label={`Quitar documento ${i + 1}`} className="text-tinta/70 hover:text-red-600">
+                <X size={14} aria-hidden="true" />
               </button>
             </li>
           ))}
@@ -47,7 +47,7 @@ export default function SubirDocumento({ carpeta, documentos, onCambiar }: Props
         {subiendo ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
         {subiendo ? "Subiendo…" : "Adjuntar documento (foto o PDF)"}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }

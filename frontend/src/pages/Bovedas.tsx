@@ -1,18 +1,19 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where, Timestamp } from "firebase/firestore";
-import { Landmark } from "lucide-react";
-import { db, registrarBoveda } from "../api/client";
+import { Landmark, Trash2, ExternalLink } from "lucide-react";
+import { db, registrarBoveda, eliminarBoveda } from "../api/client";
 import DataTable from "../components/DataTable";
 import { formatoPesos } from "../utils/formato";
 import { useRol } from "../auth/RolContext";
 import type { Boveda, EstadoBoveda, Sede } from "../types";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import CampoPrecio from "../components/CampoPrecio";
   import { crearItemBoveda, actualizarItemBoveda, eliminarItemBoveda } from "../api/client";
-import { confirmarEliminar } from "../utils/confirmar";
+import { confirmarAccion, confirmarEliminar } from "../utils/confirmar";
 import { UBICACIONES_POR_SEDE } from "../types";
-import type { ItemBoveda } from "../types";
+import type { ItemBoveda, Servicio } from "../types";
 const SEDES: Sede[] = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"];
 
 const PESTAÑAS: { valor: EstadoBoveda | "todas"; etiqueta: string }[] = [
@@ -30,7 +31,8 @@ function aFecha(valor: unknown): string {
 export default function Bovedas() {
   const { rol, sedeAsignada, sedeSeleccionada, cargando: cargandoRol } = useRol();
   const [bovedas, setBovedas] = useState<Boveda[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [searchParams] = useSearchParams();
   const estadoInicial = (searchParams.get("estado") as EstadoBoveda | null) ?? "todas";
   const [pestaña, setPestaña] = useState<EstadoBoveda | "todas">(estadoInicial);
@@ -39,6 +41,8 @@ export default function Bovedas() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idCopiado, setIdCopiado] = useState<string | null>(null);
+  // id del servicio → nombre del fallecido, para la columna "Fallecido".
+  const [fallecidoPorServicio, setFallecidoPorServicio] = useState<Record<string, string>>({});
 
 
 // junto a tus otros useState:
@@ -62,12 +66,42 @@ useEffect(() => {
       : query(base, where("sede", "==", sedeSeleccionada), orderBy("fechaLimite"));
     return onSnapshot(
       q,
-      (snap) => { setBovedas(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Boveda))); setCargando(false); },
-      (err) => console.error("Error en la consulta:", err)
+      (snap) => { setBovedas(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Boveda))); carga.listo(); },
+      (err) => carga.fallo(err)
+    );
+  }, [sedeSeleccionada, cargandoRol, carga.intento]);
+
+  useEffect(() => {
+    if (cargandoRol) return;
+    const base = collection(db, "servicios");
+    const q = sedeSeleccionada === "all" ? query(base) : query(base, where("sede", "==", sedeSeleccionada));
+    return onSnapshot(
+      q,
+      (snap) => {
+        const mapa: Record<string, string> = {};
+        snap.docs.forEach((d) => (mapa[d.id] = (d.data() as Servicio).fallecido?.nombreCompleto ?? ""));
+        setFallecidoPorServicio(mapa);
+      },
+      (err) => console.error("Error cargando servicios:", err)
     );
   }, [sedeSeleccionada, cargandoRol]);
 
-  if (cargandoRol) return <div className="py-16 text-center text-tinta/50">Cargando…</div>;
+  if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
+
+  async function manejarEliminarBoveda(b: Boveda) {
+    const nombre = b.servicioId && fallecidoPorServicio[b.servicioId] ? `la bóveda de ${fallecidoPorServicio[b.servicioId]}` : `la bóveda de ${b.zona}`;
+    const ok = await confirmarAccion(
+      "¿Eliminar la bóveda?",
+      `Se va a borrar ${nombre}. Esta acción no se puede deshacer.`,
+      "Sí, eliminar"
+    );
+    if (!ok) return;
+    try {
+      await eliminarBoveda(b.id);
+    } catch (err) {
+      console.error("Error eliminando bóveda:", err);
+    }
+  }
 
   const filtradas = pestaña === "todas" ? bovedas : bovedas.filter((b) => b.estado === pestaña);
 
@@ -137,8 +171,8 @@ async function manejarEliminarItem(item: ItemBoveda) {
         {mostrarCatalogo && (
           <div className="mt-3 space-y-3">
             <form onSubmit={manejarGuardarItem} className="grid gap-2 sm:grid-cols-4">
-              <input name="nombre" required defaultValue={editandoItem?.nombre} placeholder="Nombre (ej. Bóveda Pailitas-Pelaya)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
-              <input name="zonaItem" required defaultValue={editandoItem?.zona} placeholder="Zona que cubre" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+              <input name="nombre" required defaultValue={editandoItem?.nombre} placeholder="Nombre (ej. Bóveda Pailitas-Pelaya)" aria-label="Nombre (ej. Bóveda Pailitas-Pelaya)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm sm:col-span-2" />
+              <input name="zonaItem" required defaultValue={editandoItem?.zona} placeholder="Zona que cubre" aria-label="Zona que cubre" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
               <CampoPrecio name="precioItem" required valorInicial={editandoItem?.precio} placeholder="Precio" />
               <button type="submit" className="sm:col-span-4 rounded-lg bg-vino-700 px-4 py-2 text-sm text-white">
                 {editandoItem ? "Guardar cambios" : "Agregar al catálogo"}
@@ -163,7 +197,7 @@ async function manejarEliminarItem(item: ItemBoveda) {
       <div className="grid grid-cols-3 gap-3">
         {(["vigente", "por vencer", "vencida"] as const).map((estado) => (
           <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
-            <p className="text-xs capitalize text-tinta/50">{estado}</p>
+            <p className="text-xs capitalize text-tinta/70">{estado}</p>
             <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
           </div>
         ))}
@@ -175,7 +209,7 @@ async function manejarEliminarItem(item: ItemBoveda) {
             <button
               key={p.valor}
               onClick={() => setPestaña(p.valor)}
-              className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === p.valor ? "bg-vino-700 text-white" : "bg-white text-tinta/60 border border-vino-100"
+              className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === p.valor ? "bg-vino-700 text-white" : "bg-white text-tinta/70 border border-vino-100"
                 }`}
             >
               {p.etiqueta}
@@ -195,14 +229,14 @@ async function manejarEliminarItem(item: ItemBoveda) {
         <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             {rol === "admin" ? (
-              <select name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+              <select aria-label="Sede" name="sede" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
                 <option value="">Sede…</option>
                 {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             ) : (
               <input type="hidden" name="sede" value={sedeAsignada ?? ""} />
             )}
-            <input name="servicioId" placeholder="ID del servicio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="servicioId" placeholder="ID del servicio" aria-label="ID del servicio" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <select
   value={municipioForm}
   onChange={(e) => setMunicipioForm(e.target.value)}
@@ -214,7 +248,7 @@ async function manejarEliminarItem(item: ItemBoveda) {
   {UBICACIONES_POR_SEDE[municipioForm].map((v) => <option key={v} value={`${municipioForm} - ${v}`}>{v}</option>)}
 </select>
 
-<select
+<select aria-label="Ítem del catálogo"
   value={itemSeleccionado}
   onChange={(e) => setItemSeleccionado(e.target.value)}
   disabled={usarValorManual}
@@ -231,14 +265,14 @@ async function manejarEliminarItem(item: ItemBoveda) {
 {usarValorManual && (
   <CampoPrecio name="valorArriendoManual" placeholder="Valor de la bóveda" />
 )}
-            <input name="fechaInicio" type="date" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+            <input name="fechaInicio" type="date" min="1900-01-01" max="2100-12-31" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             
             <label className="flex items-center gap-2 text-sm text-tinta/70">
               <input type="checkbox" name="incluyeExhumacion" />
               Incluye exhumación
             </label>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
             disabled={guardando}
@@ -249,9 +283,15 @@ async function manejarEliminarItem(item: ItemBoveda) {
         </form>
       )}
 
+      <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
           { encabezado: "Sede", render: (b: Boveda) => b.sede },
+          {
+            encabezado: "Fallecido",
+            render: (b: Boveda) => (b.servicioId && fallecidoPorServicio[b.servicioId]) || "—",
+            orden: (b: Boveda) => (b.servicioId ? fallecidoPorServicio[b.servicioId] : undefined),
+          },
           { encabezado: "Zona", render: (b: Boveda) => b.zona },
           { encabezado: "Inicio", render: (b: Boveda) => aFecha(b.fechaInicio) },
           { encabezado: "Vence", render: (b: Boveda) => aFecha(b.fechaLimite) },
@@ -273,13 +313,29 @@ async function manejarEliminarItem(item: ItemBoveda) {
             encabezado: "Servicio",
             render: (b: Boveda) =>
               b.servicioId ? (
-                <button onClick={() => copiarId(b.servicioId!)} className="flex items-center gap-1 font-mono text-xs text-tinta/50 hover:text-vino-700">
-                  {b.servicioId.slice(0, 8)}…
-                  {idCopiado === b.servicioId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/servicios?servicio=${encodeURIComponent(b.servicioId)}`}
+                    className="flex items-center gap-1 font-mono text-xs text-vino-700 hover:underline"
+                    title="Ver el servicio"
+                  >
+                    {b.servicioId.slice(0, 8)}… <ExternalLink size={12} />
+                  </Link>
+                  <button onClick={() => copiarId(b.servicioId!)} className="text-tinta/70 hover:text-vino-700" title="Copiar ID">
+                    {idCopiado === b.servicioId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                  </button>
+                </div>
               ) : (
-                <span className="text-xs text-tinta/40">Sin servicio</span>
+                <span className="text-xs text-tinta/70">Sin servicio</span>
               ),
+          },
+          {
+            encabezado: "Acciones",
+            render: (b: Boveda) => (
+              <button aria-label="Eliminar bóveda" onClick={() => manejarEliminarBoveda(b)} className="text-red-600 hover:underline" title="Eliminar bóveda">
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
+            ),
           },
         ]}
         filas={filtradas}

@@ -5,6 +5,9 @@ import { Afiliado, Beneficiario } from "../../domain/entities/afiliado";
 import { metadataHumano } from "../../domain/value-objects/metadata-cambio";
 import { limiteBeneficiariosDelPlan } from "../../domain/value-objects/cupo-beneficiarios";
 import { PlanesRepositoryFirestore } from "../../infrastructure/firebase/plan.repository.firestore";
+import { COLECCION_PAGOS_SEGURO, PagosRepositoryFirestore } from "../../infrastructure/firebase/pago.repository.firestore";
+import { guardarSeguroVida } from "../../application/seguros/seguroVida";
+import { recalcularAfiliadoDesdePagos } from "../../application/pagos/recalcularAfiliadoDesdePagos";
 
 import { crearAfiliado, CrearAfiliadoInput } from "../../application/afiliados/crear-afiliado.usecase";
 import { buscarPersonaCubierta } from "../../application/afiliados/buscar-persona-cubierta.usecase";
@@ -21,16 +24,18 @@ import {
 
 const repo = new AfiliadosRepositoryFirestore();
 const planesRepo = new PlanesRepositoryFirestore();
+const pagosRepo = new PagosRepositoryFirestore();
+const pagosSeguroRepo = new PagosRepositoryFirestore(COLECCION_PAGOS_SEGURO);
 
-/** Cupos sin costo extra del plan (integral: 8, demás: 7). */
-async function limiteDelPlan(planId: string | undefined): Promise<number> {
+/** Cupos sin costo extra (integral en Pelaya: 8, demás: 7). */
+async function limiteDelPlan(planId: string | undefined, sede: string | undefined): Promise<number> {
   const plan = planId ? await planesRepo.obtenerPorId(planId) : null;
-  return limiteBeneficiariosDelPlan(plan?.nombre);
+  return limiteBeneficiariosDelPlan(plan?.nombre, sede);
 }
 
 async function limiteDelAfiliado(afiliadoId: string): Promise<number> {
   const afiliado = await repo.obtenerPorId(afiliadoId);
-  return limiteDelPlan(afiliado?.planId);
+  return limiteDelPlan(afiliado?.planId, afiliado?.sede);
 }
 
 // ---------- Helpers de serialización (nunca mandar un Date/Timestamp crudo por la red) ----------
@@ -52,7 +57,7 @@ function serializarBeneficiario(b: Beneficiario) {
   };
 }
 
-function serializarAfiliado(a: Afiliado) {
+export function serializarAfiliado(a: Afiliado) {
   return {
     ...a,
     metadata: undefined,
@@ -61,13 +66,20 @@ function serializarAfiliado(a: Afiliado) {
     fechaNacimiento: iso(a.fechaNacimiento),
     ultimoPago: a.ultimoPago ? { ...a.ultimoPago, fecha: iso(a.ultimoPago.fecha) } : null,
     beneficiarios: a.beneficiarios.map(serializarBeneficiario),
+    seguroVida: a.seguroVida
+      ? {
+          ...a.seguroVida,
+          fechaInicio: iso(a.seguroVida.fechaInicio),
+          ultimoPago: a.seguroVida.ultimoPago ? { ...a.seguroVida.ultimoPago, fecha: iso(a.seguroVida.ultimoPago.fecha) } : null,
+        }
+      : undefined,
   };
 }
 
 // ---------- Helpers de autorización / manejo de errores ----------
 
 /** Para funciones cuyo input trae afiliadoId — verifica sesión y que la sede coincida (o sea admin). */
-async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Promise<string> {
+export async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Promise<string> {
   const uid = requireAuth(request);
   const afiliado = await repo.obtenerPorId(request.data.afiliadoId);
   if (!afiliado) throw new HttpsError("not-found", "Ese afiliado no existe.");
@@ -78,7 +90,7 @@ async function autorizar(request: CallableRequest<{ afiliadoId: string }>): Prom
 }
 
 /** Convierte cualquier Error lanzado por un caso de uso en un HttpsError legible para el cliente. */
-async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
+export async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
   try {
     return await accion();
   } catch (err) {
@@ -92,8 +104,18 @@ async function ejecutar<T>(accion: () => Promise<T>): Promise<T> {
 /** El dashboard llama esto para crear un afiliado nuevo. */
 export const crearAfiliadoFn = onCall<CrearAfiliadoInput>(async (request) => {
   const uid = requireAuth(request);
-  const limite = await limiteDelPlan(request.data.planId);
-  const afiliado = await ejecutar(() => crearAfiliado(repo, request.data, metadataHumano(uid), limite));
+  // Quien no es admin solo puede crear afiliados en su propia sede.
+  if (request.auth?.token.rol !== "admin") {
+    const sede = request.auth?.token.sede;
+    if (!sede || sede === "all") throw new HttpsError("permission-denied", "Tu usuario no tiene una sede asignada.");
+    request.data.sede = sede;
+  }
+  const limite = await limiteDelPlan(request.data.planId, request.data.sede);
+  let afiliado = await ejecutar(() => crearAfiliado(repo, request.data, metadataHumano(uid), limite));
+  const seguro = request.data.seguroVida;
+  if (request.data.tieneSeguroVida && seguro) {
+    afiliado = await ejecutar(() => guardarSeguroVida(repo, pagosSeguroRepo, { ...seguro, afiliadoId: afiliado.id }, metadataHumano(uid)));
+  }
   return { afiliado: serializarAfiliado(afiliado) };
 });
 
@@ -116,7 +138,15 @@ export const actualizarAfiliadoFn = onCall<ActualizarAfiliadoInput>(async (reque
   if (request.auth?.token.rol !== "admin" && afiliado.sede !== request.auth?.token.sede) {
     throw new HttpsError("permission-denied", "No puedes editar afiliados de otra sede.");
   }
-  const actualizado = await ejecutar(() => actualizarAfiliado(repo, request.data, metadataHumano(uid)));
+  // El seguro se activa con guardarSeguroVidaFn (necesita precio, beneficiario y primer pago).
+  const datos = { ...request.data };
+  if (datos.tieneSeguroVida && !afiliado.seguroVida) delete datos.tieneSeguroVida;
+  let actualizado = await ejecutar(() => actualizarAfiliado(repo, datos, metadataHumano(uid)));
+  if (datos.fechaAfiliacionReal) {
+    // Cambiar la fecha de afiliación cambia el día de corte → recalcula el estado.
+    await recalcularAfiliadoDesdePagos(repo, pagosRepo, afiliado.id, metadataHumano(uid));
+    actualizado = (await repo.obtenerPorId(afiliado.id)) ?? actualizado;
+  }
   return { afiliado: serializarAfiliado(actualizado) };
 });
 
