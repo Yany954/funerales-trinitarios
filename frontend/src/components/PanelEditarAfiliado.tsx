@@ -4,6 +4,7 @@ import { X, Save } from "lucide-react";
 import { actualizarAfiliado, guardarSeguroVida } from "../api/client";
 import CamposSeguroVida, { leerSeguroDeForm } from "./CamposSeguroVida";
 import CampoPrecio from "./CampoPrecio";
+import SubirDocumento from "./SubirDocumento";
 import { confirmarAccion } from "../utils/confirmar";
 import type { Afiliado, PlanFunerario } from "../types";
 import { UBICACIONES_POR_SEDE, EDAD_MAXIMA_TITULAR_SEGURO } from "../types";
@@ -27,6 +28,7 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
   // Activar un seguro que nunca tuvo pide precio, beneficiario y primer pago.
   const activandoSeguroNuevo = conSeguro && !afiliado.seguroVida;
   const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState(afiliado.ubicacion ?? afiliado.vereda ?? "");
+  const [contratoFotos, setContratoFotos] = useState<string[]>(afiliado.contratoFotos ?? []);
 
   async function manejarGuardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -58,6 +60,8 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
         fechaAfiliacionReal: String(form.get("fechaAfiliacionReal")),
         fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
+        celular: String(form.get("celular") ?? "").trim(),
+        contratoFotos,
         tieneSeguroVida: conSeguro,
       });
       if (seguroNuevo) {
@@ -96,7 +100,9 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
           <input name="fechaAfiliacionReal" type="date" min="1900-01-01" max="2100-12-31" required defaultValue={aInputDate(afiliado.fechaAfiliacionReal)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
           <label className="block text-xs text-tinta/70">Fecha de nacimiento (opcional)</label>
 <input name="fechaNacimiento" type="date" min="1900-01-01" max="2100-12-31" defaultValue={aInputDate(afiliado.fechaNacimiento)} className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-<label className="block text-xs text-tinta/70">Cuota mensual que paga</label>
+<label className="block text-xs text-tinta/70">Celular (opcional)</label>
+          <input name="celular" type="tel" inputMode="tel" defaultValue={afiliado.celular ?? ""} placeholder="Ej. 300 123 4567" aria-label="Celular" className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label className="block text-xs text-tinta/70">Cuota mensual que paga</label>
           <CampoPrecio name="valorCuotaMensual" required valorInicial={afiliado.valorCuotaMensual} placeholder="Cuota mensual" />
           <label className="flex items-center gap-2 text-sm text-tinta/70">
             <input type="checkbox" checked={conSeguro} onChange={(e) => setConSeguro(e.target.checked)} />
@@ -106,6 +112,10 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
           {conSeguro && afiliado.seguroVida && (
             <p className="text-xs text-tinta/70">Los datos y pagos del seguro se editan en la página Seguros de vida.</p>
           )}
+          <div className="space-y-1">
+            <p className="text-xs text-tinta/70">Fotos del contrato (el titular las ve en la app)</p>
+            <SubirDocumento carpeta={`afiliados/${afiliado.sede}/${afiliado.id}/contrato`} documentos={contratoFotos} onCambiar={setContratoFotos} />
+          </div>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={guardando} className="flex w-full items-center justify-center gap-2 rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
             <Save size={16} />

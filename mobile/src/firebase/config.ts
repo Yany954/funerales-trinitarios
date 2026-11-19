@@ -2,8 +2,9 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence, connectAuthEmulator, type Auth } from "firebase/auth";
-import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 /**
  * Conexión al MISMO proyecto de Firebase que usa el dashboard.
@@ -33,8 +34,13 @@ try {
 export const auth = authInstancia;
 
 // Algunas redes móviles cortan la conexión en tiempo real: cambia sola a long polling.
-export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+// En desarrollo, la recarga rápida vuelve a evaluar este archivo: se guarda la
+// instancia en globalThis para no crear una segunda (daría "Expected first
+// argument to doc() to be a CollectionReference…").
+const global_ = globalThis as unknown as { __trinitariosDb?: Firestore };
+export const db: Firestore = global_.__trinitariosDb ?? (global_.__trinitariosDb = yaIniciada ? getFirestore(app) : initializeFirestore(app, { experimentalAutoDetectLongPolling: true }));
 export const functions = getFunctions(app);
+export const storage = getStorage(app);
 
 const usarEmuladores = __DEV__ && process.env.EXPO_PUBLIC_USAR_EMULADORES === "true";
 if (usarEmuladores && !yaIniciada) {
@@ -43,5 +49,6 @@ if (usarEmuladores && !yaIniciada) {
   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
   connectFirestoreEmulator(db, host, 3035);
   connectFunctionsEmulator(functions, host, 5001);
+  connectStorageEmulator(storage, host, 9199);
   console.log(`Usando emuladores de Firebase en ${host}`);
 }

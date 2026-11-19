@@ -5,16 +5,18 @@ interface Props {
   src?: string;
   alt?: string;
   className?: string;
+  /** Ocupa todo el ancho (para fotos grandes en tarjetas). */
+  bloque?: boolean;
 }
 
-export default function ImagenAmpliable({ src, alt = "", className }: Props) {
+export default function ImagenAmpliable({ src, alt = "", className, bloque }: Props) {
   const [abierta, setAbierta] = useState(false);
 
   if (!src) return <div className={className ?? "h-10 w-10 rounded-md bg-vino-50"} />;
 
   return (
     <>
-      <button type="button" onClick={() => setAbierta(true)} aria-label={alt ? `Ampliar imagen: ${alt}` : "Ampliar imagen"} className="cursor-zoom-in">
+      <button type="button" onClick={() => setAbierta(true)} aria-label={alt ? `Ampliar imagen: ${alt}` : "Ampliar imagen"} className={bloque ? "block w-full cursor-zoom-in" : "cursor-zoom-in"}>
         <img src={src} alt={alt} className={className ?? "h-10 w-10 rounded-md object-cover"} />
       </button>
       {abierta && (

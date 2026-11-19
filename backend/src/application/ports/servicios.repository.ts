@@ -9,5 +9,7 @@ export interface ServiciosRepository {
   actualizar(id: string, cambios: Partial<Omit<Servicio, "id">>): Promise<Servicio>;
   eliminar(id: string): Promise<void>;
   buscarPorCedulaTitular(cedula: string): Promise<Servicio[]>;
+  /** Servicios enlazados a un afiliado (para la vista de la app). */
+  buscarPorAfiliadoId(afiliadoId: string): Promise<Servicio[]>;
   buscarPorRangoFechas(desde: Date, hasta: Date, sede?: string): Promise<Servicio[]>;
 }

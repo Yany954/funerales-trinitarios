@@ -19,9 +19,16 @@ service cloud.firestore {
         && request.auth.token.afiliadoId == afiliadoId;
     }
 
+    // El documento interno (observaciones, certificados, quién cambió qué)
+    // es solo del staff. El titular lee su copia recortada: vista_afiliado.
     match /afiliados/{id} {
-      allow read: if (estaAutenticado() && (esAdmin() || resource.data.sede == miSede()))
-        || esAfiliadoDueno(id);
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
+
+    // Lo que ve la app: la arma el backend (triggers), nadie la escribe desde el cliente.
+    match /vista_afiliado/{afiliadoId} {
+      allow read: if esAfiliadoDueno(afiliadoId);
       allow write: if false;
     }
 

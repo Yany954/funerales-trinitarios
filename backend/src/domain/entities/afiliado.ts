@@ -31,6 +31,12 @@ export interface Afiliado {
   soloSeguro?: boolean;
   observaciones?: string;
   periodoCubiertoHasta?: string | null;
+  /** Celular de contacto (lo agrega el titular en la app o el staff en el dashboard). */
+  celular?: string;
+  /** Foto de perfil que sube el titular desde la app. */
+  fotoPerfilURL?: string;
+  /** Fotos del contrato físico, subidas por el staff desde el dashboard. */
+  contratoFotos?: string[];
   metadata: MetadataCambio;
 }
 

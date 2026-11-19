@@ -89,6 +89,12 @@ export interface Afiliado {
   seguroVida?: SeguroVida;
   /** Titular que solo tiene seguro de vida, sin plan exequial. */
   soloSeguro?: boolean;
+  /** Celular de contacto (lo puede agregar el titular desde la app). */
+  celular?: string;
+  /** Foto que sube el titular desde la app. */
+  fotoPerfilURL?: string;
+  /** Fotos del contrato físico (las ve el titular en la app). */
+  contratoFotos?: string[];
 }
 
 // ============================================================
@@ -178,6 +184,8 @@ export interface ActualizarAfiliadoInput {
   aseguradora?: string;
   observaciones?: string;
   ubicacion?: string;
+  celular?: string; // "" = quitar
+  contratoFotos?: string[];
 }
 
 export interface ActualizarBeneficiariosInput {

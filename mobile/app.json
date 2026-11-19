@@ -35,6 +35,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#FAF6F1"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app usa tus fotos solo para tu foto de perfil.",
+          "cameraPermission": "La app usa la cámara solo para tu foto de perfil."
+        }
       ]
     ],
     "scheme": "trinitarios",

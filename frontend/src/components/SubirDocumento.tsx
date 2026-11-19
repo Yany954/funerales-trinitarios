@@ -14,9 +14,13 @@ export default function SubirDocumento({ carpeta, documentos, onCambiar }: Props
 
   async function manejarArchivos(e: React.ChangeEvent<HTMLInputElement>) {
     const archivos = Array.from(e.target.files ?? []);
+    // Se acumula aquí: si se suben varias a la vez, cada una se suma a las anteriores
+    // (antes cada vuelta partía de la lista vieja y solo quedaba la última).
+    let acumulado = documentos;
     for (const archivo of archivos) {
       const url = await subir(archivo, carpeta);
-      onCambiar([...documentos, url]);
+      acumulado = [...acumulado, url];
+      onCambiar(acumulado);
     }
     if (inputRef.current) inputRef.current.value = "";
   }

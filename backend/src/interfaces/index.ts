@@ -22,3 +22,11 @@ export {
 // ---------- App móvil de afiliados ----------
 export { generarCodigoActivacionFn, restablecerAccesoAppFn } from "./admin-api/acceso-app";
 export { registrarCuentaAfiliadoFn } from "./afiliados-api/cuenta";
+export { actualizarPerfilAfiliadoFn } from "./afiliados-api/perfil";
+export {
+  vistaPorAfiliadoFn,
+  vistaPorCuentaAppFn,
+  vistaPorPagoFn,
+  vistaPorPagoSeguroFn,
+  vistaPorServicioFn,
+} from "./triggers/vista-afiliado";

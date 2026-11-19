@@ -71,13 +71,16 @@ export function Parrafo({ children, suave }: { children: ReactNode; suave?: bool
 interface BotonProps {
   titulo: string;
   onPress: () => void;
-  variante?: "primario" | "secundario" | "texto";
+  /** "peligro": acciones como cerrar sesión (letra e ícono en rojo). */
+  variante?: "primario" | "secundario" | "texto" | "peligro";
+  icono?: keyof typeof Ionicons.glyphMap;
   cargando?: boolean;
   deshabilitado?: boolean;
 }
 
-export function Boton({ titulo, onPress, variante = "primario", cargando, deshabilitado }: BotonProps) {
+export function Boton({ titulo, onPress, variante = "primario", icono, cargando, deshabilitado }: BotonProps) {
   const inactivo = deshabilitado || cargando;
+  const colorLetra = variante === "primario" ? colores.blanco : variante === "peligro" ? colores.error : colores.vino700;
   return (
     <Pressable
       accessibilityRole="button"
@@ -88,17 +91,18 @@ export function Boton({ titulo, onPress, variante = "primario", cargando, deshab
         estilos.boton,
         variante === "primario" && estilos.botonPrimario,
         variante === "secundario" && estilos.botonSecundario,
-        variante === "texto" && estilos.botonTexto,
+        (variante === "texto" || variante === "peligro") && estilos.botonTexto,
         pressed && { opacity: 0.8 },
         inactivo && { opacity: 0.6 },
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color={variante === "primario" ? colores.blanco : colores.vino700} />
+        <ActivityIndicator color={colorLetra} />
       ) : (
-        <Text style={[estilos.botonLetra, variante === "primario" ? { color: colores.blanco } : { color: colores.vino700 }]}>
-          {titulo}
-        </Text>
+        <View style={estilos.botonContenido}>
+          {icono ? <Ionicons name={icono} size={22} color={colorLetra} /> : null}
+          <Text style={[estilos.botonLetra, { color: colorLetra }]}>{titulo}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -160,6 +164,67 @@ export function Cargando() {
   );
 }
 
+/** Caja blanca con borde suave, para agrupar información. */
+export function Tarjeta({ titulo, children }: { titulo?: string; children: ReactNode }) {
+  return (
+    <View style={estilos.tarjeta}>
+      {titulo ? <Text style={estilos.tarjetaTitulo}>{titulo}</Text> : null}
+      {children}
+    </View>
+  );
+}
+
+/** Etiqueta a la izquierda, valor a la derecha (o debajo si no cabe). */
+export function FilaDato({ etiqueta, valor }: { etiqueta: string; valor: ReactNode }) {
+  return (
+    <View style={estilos.fila}>
+      <Text style={estilos.filaEtiqueta}>{etiqueta}</Text>
+      <Text style={estilos.filaValor}>{valor}</Text>
+    </View>
+  );
+}
+
+type TonoChip = "exito" | "alerta" | "neutro" | "vino";
+
+/** Etiqueta redondeada de estado: "Al día", "En mora", "Retirado"… */
+export function Chip({ texto: contenido, tono = "neutro" }: { texto: string; tono?: TonoChip }) {
+  const colores_ = {
+    exito: [colores.exitoFondo, colores.exito],
+    alerta: [colores.alertaFondo, colores.alerta],
+    neutro: [colores.vino50, colores.tintaSuave],
+    vino: [colores.vino100, colores.vino700],
+  }[tono];
+  return (
+    <View style={[estilos.chip, { backgroundColor: colores_[0] }]}>
+      <Text style={[estilos.chipTexto, { color: colores_[1] }]}>{contenido}</Text>
+    </View>
+  );
+}
+
+/** Tono del chip según el estado del plan o del seguro. */
+export function tonoEstado(estado: string): TonoChip {
+  return estado === "activo" ? "exito" : estado === "en mora" ? "alerta" : "neutro";
+}
+
+/** Selector de dos o más opciones (p. ej. Plan / Seguro). */
+export function Segmento<T extends string>({ opciones, valor, onCambiar }: { opciones: { valor: T; etiqueta: string }[]; valor: T; onCambiar: (v: T) => void }) {
+  return (
+    <View style={estilos.segmento} accessibilityRole="tablist">
+      {opciones.map((o) => (
+        <Pressable
+          key={o.valor}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: o.valor === valor }}
+          onPress={() => onCambiar(o.valor)}
+          style={[estilos.segmentoOpcion, o.valor === valor && estilos.segmentoActivo]}
+        >
+          <Text style={[estilos.segmentoTexto, o.valor === valor && { color: colores.blanco }]}>{o.etiqueta}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 const estilos = StyleSheet.create({
   flex: { flex: 1 },
   fondo: { flex: 1, backgroundColor: colores.crema },
@@ -185,6 +250,7 @@ const estilos = StyleSheet.create({
   botonSecundario: { backgroundColor: colores.blanco, borderWidth: 2, borderColor: colores.vino600 },
   botonTexto: { backgroundColor: "transparent" },
   botonLetra: { fontFamily: fuentes.textoFuerte, fontSize: texto.normal },
+  botonContenido: { flexDirection: "row", alignItems: "center", gap: espacio.s },
   campo: { gap: espacio.xs },
   etiqueta: { fontFamily: fuentes.textoFuerte, fontSize: texto.normal, color: colores.tinta },
   inputFila: { justifyContent: "center" },
@@ -203,4 +269,15 @@ const estilos = StyleSheet.create({
   ojo: { position: "absolute", right: 0, width: 56, height: ALTO_TOCABLE, alignItems: "center", justifyContent: "center" },
   ayuda: { fontFamily: fuentes.texto, fontSize: texto.pequeno, color: colores.tintaSuave },
   aviso: { borderRadius: RADIO, padding: espacio.m },
+  tarjeta: { backgroundColor: colores.blanco, borderRadius: RADIO, padding: espacio.l, gap: espacio.s, borderWidth: 1, borderColor: colores.borde },
+  tarjetaTitulo: { fontFamily: fuentes.titulo, fontSize: texto.grande, color: colores.vino900, marginBottom: espacio.xs },
+  fila: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: espacio.s, paddingVertical: 2 },
+  filaEtiqueta: { fontFamily: fuentes.texto, fontSize: texto.normal, color: colores.tintaSuave },
+  filaValor: { fontFamily: fuentes.textoFuerte, fontSize: texto.normal, color: colores.tinta, flexShrink: 1, textAlign: "right" },
+  chip: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: espacio.m, paddingVertical: 6 },
+  chipTexto: { fontFamily: fuentes.textoFuerte, fontSize: texto.pequeno + 1 },
+  segmento: { flexDirection: "row", backgroundColor: colores.vino50, borderRadius: RADIO, padding: 4, gap: 4 },
+  segmentoOpcion: { flex: 1, minHeight: 48, borderRadius: RADIO - 4, alignItems: "center", justifyContent: "center" },
+  segmentoActivo: { backgroundColor: colores.vino700 },
+  segmentoTexto: { fontFamily: fuentes.textoFuerte, fontSize: texto.normal, color: colores.vino700 },
 });

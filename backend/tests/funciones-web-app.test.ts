@@ -46,3 +46,11 @@ describe("funciones compartidas por web y app", () => {
     assert.deepEqual([...llamadas("mobile/src")].filter((n) => !backend.includes(n)), []);
   });
 });
+
+describe("tipos compartidos backend ↔ app", () => {
+  it("mobile/src/vista/tipos.ts es copia exacta de la entidad del backend", () => {
+    const backend = readFileSync(join(RAIZ, "backend/src/domain/entities/vista-afiliado.ts"), "utf8");
+    const app = readFileSync(join(RAIZ, "mobile/src/vista/tipos.ts"), "utf8").split("\n").slice(1).join("\n");
+    assert.equal(app, backend, "Copia backend/src/domain/entities/vista-afiliado.ts a mobile/src/vista/tipos.ts");
+  });
+});

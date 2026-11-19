@@ -83,6 +83,11 @@ export class ServiciosRepositoryFirestore implements ServiciosRepository {
       .get();
     return snap.docs.map((d) => deFirestore(d.id, d.data()));
   }
+  async buscarPorAfiliadoId(afiliadoId: string): Promise<Servicio[]> {
+    // Sin orderBy para no necesitar un índice compuesto; se ordena en memoria.
+    const snap = await db.collection(SERVICIOS).where("afiliadoId", "==", afiliadoId).get();
+    return snap.docs.map((d) => deFirestore(d.id, d.data()));
+  }
   async buscarPorRangoFechas(desde: Date, hasta: Date, sede?: string): Promise<Servicio[]> {
     let q: FirebaseFirestore.Query = db.collection(SERVICIOS)
       .where("fechaServicio", ">=", Timestamp.fromDate(desde))

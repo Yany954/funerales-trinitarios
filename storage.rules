@@ -49,6 +49,19 @@ service firebase.storage {
       allow read: if estaAutenticado();
       allow write: if false;
     }
+
+    // Foto de perfil del titular (app móvil): solo en SU carpeta, solo imágenes
+    // de hasta 5 MB. El backend (actualizarPerfilAfiliadoFn) vuelve a validar
+    // la ruta antes de guardarla en el afiliado.
+    match /perfiles/{afiliadoId}/{archivo} {
+      allow read: if estaAutenticado()
+        || (request.auth != null && request.auth.token.rol == 'afiliado' && request.auth.token.afiliadoId == afiliadoId);
+      allow write: if request.auth != null
+        && request.auth.token.rol == 'afiliado'
+        && request.auth.token.afiliadoId == afiliadoId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
     match /afiliados/{allPaths=**} {
       allow read: if estaAutenticado();
       allow write: if estaAutenticado()
