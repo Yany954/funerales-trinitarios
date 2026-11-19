@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useDialogo } from "../hooks/useDialogo";
 import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Pencil, Receipt, ShieldOff, X, Save, Plus, Trash2, Search, Smartphone } from "lucide-react";
+import { Pencil, Receipt, ShieldOff, X, Save, Plus, Trash2, Search, Smartphone, Wallet, ShieldCheck } from "lucide-react";
 import PanelAccesoApp from "../components/PanelAccesoApp";
 import { db, actualizarAfiliado, guardarSeguroVida, crearTitularSeguro, eliminarAfiliado } from "../api/client";
 import DataTable from "../components/DataTable";
@@ -95,6 +95,8 @@ export default function SegurosVida() {
     activo: afiliados.filter((a) => a.seguroVida.estado === "activo").length,
     "en mora": afiliados.filter((a) => a.seguroVida.estado === "en mora").length,
   };
+  const recaudoMensual = afiliados.reduce((t, a) => t + (a.seguroVida.precioMensual ?? 0), 0);
+  const aseguradoTotal = afiliados.reduce((t, a) => t + (a.seguroVida.valorIndemnizacion ?? 0), 0);
   const nombrePlan = (a: ConSeguro) => (a.soloSeguro ? "Solo seguro de vida" : mapaPlanes[a.planId] ?? a.planId);
   const filtrados = afiliados.filter(
     (a) => (filtroEstado === "todos" || a.seguroVida.estado === filtroEstado) && coincide(a, termino)
@@ -124,21 +126,21 @@ export default function SegurosVida() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg text-vino-900">Titulares con seguro de vida</h2>
-          <p className="text-sm text-tinta/70">
-            Si la persona tiene plan exequial, marca "Tiene seguro de vida" en la página Afiliados. Si solo tiene seguro, usa el botón.
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-2xl">
+          <h2 className="font-display text-2xl text-vino-900">Seguros de vida</h2>
+          <p className="mt-1 text-sm text-tinta/70">
+            Titulares con seguro de vida. Si la persona tiene plan exequial, marca "Tiene seguro de vida" en Afiliados; si solo tiene seguro, usa el botón.
           </p>
         </div>
         <button
           onClick={() => setCreando(true)}
-          className="flex items-center gap-2 rounded-lg bg-vino-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-vino-600"
+          className="flex min-h-[44px] items-center gap-2 rounded-lg bg-vino-700 px-4 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px"
         >
-          <Plus size={16} /> Nuevo titular de seguro
+          <Plus size={16} aria-hidden="true" /> Nuevo titular de seguro
         </button>
-      </div>
+      </header>
 
       <div className="relative">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-tinta/70" />
@@ -155,67 +157,102 @@ export default function SegurosVida() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {(["activo", "en mora"] as const).map((estado) => (
-          <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
-            <p className="text-xs capitalize text-tinta/70">{estado}</p>
-            <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
+      <section aria-label="Resumen" className="space-y-4 rounded-2xl border border-vino-100 bg-white p-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {([
+            { valor: "activo", titulo: "Al día", punto: "bg-green-600", texto: "text-green-700" },
+            { valor: "en mora", titulo: "En mora", punto: "bg-amber-500", texto: "text-amber-700" },
+          ] as const).map((e) => {
+            const activo = filtroEstado === e.valor;
+            return (
+              <button
+                key={e.valor}
+                onClick={() => setFiltroEstado(activo ? "todos" : e.valor)}
+                aria-pressed={activo}
+                className={`rounded-xl border p-4 text-left transition hover:shadow-md ${activo ? "border-vino-600 ring-2 ring-vino-100" : "border-vino-100"}`}
+              >
+                <p className="flex items-center gap-2 text-sm text-tinta/70">
+                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${e.punto}`} /> {e.titulo}
+                </p>
+                <p className={`mt-1 font-display text-3xl tabular-nums ${e.texto}`}>{conteo[e.valor]}</p>
+              </button>
+            );
+          })}
+          <div className="rounded-xl border border-vino-100 p-4">
+            <p className="flex items-center gap-2 text-sm text-tinta/70"><Wallet size={15} aria-hidden="true" /> Recaudo mensual</p>
+            <p className="mt-1 font-display text-2xl tabular-nums text-vino-900">{formatoPesos(recaudoMensual)}</p>
           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {([
-          { valor: "todos", etiqueta: "Todos" },
-          { valor: "activo", etiqueta: "Activos" },
-          { valor: "en mora", etiqueta: "En mora" },
-        ] as const).map((p) => (
-          <button
-            key={p.valor}
-            onClick={() => setFiltroEstado(p.valor)}
-            className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/70"}`}
-          >
-            {p.etiqueta}
-          </button>
-        ))}
-      </div>
+          <div className="rounded-xl border border-vino-100 p-4">
+            <p className="flex items-center gap-2 text-sm text-tinta/70"><ShieldCheck size={15} aria-hidden="true" /> Valor asegurado total</p>
+            <p className="mt-1 font-display text-2xl tabular-nums text-vino-900">{formatoPesos(aseguradoTotal)}</p>
+          </div>
+        </div>
+        {afiliados.length > 0 && (
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-vino-50" role="img" aria-label={`${conteo.activo} al día, ${conteo["en mora"]} en mora`}>
+            <div className="bg-green-600" style={{ width: `${(conteo.activo / afiliados.length) * 100}%` }} />
+            <div className="bg-amber-500" style={{ width: `${(conteo["en mora"] / afiliados.length) * 100}%` }} />
+          </div>
+        )}
+        <p className="text-xs text-tinta/70">
+          {afiliados.length} {afiliados.length === 1 ? "titular" : "titulares"}.{" "}
+          {filtroEstado === "todos" ? "Toca una cifra para ver solo ese grupo." : "Toca la cifra otra vez para ver todos."}
+        </p>
+      </section>
 
       <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
-          { encabezado: "Nombre", render: (a: ConSeguro) => a.nombreCompleto, orden: (a: ConSeguro) => a.nombreCompleto },
-          { encabezado: "Cédula", render: (a: ConSeguro) => a.cedula || "—" },
-          { encabezado: "Plan", render: (a: ConSeguro) => nombrePlan(a), orden: (a: ConSeguro) => nombrePlan(a) },
           {
-            encabezado: "Inicio vigencia",
-            render: (a: ConSeguro) => formatoFecha(a.seguroVida.fechaInicio),
+            encabezado: "Titular",
+            orden: (a: ConSeguro) => a.nombreCompleto,
+            render: (a: ConSeguro) => (
+              <div className="min-w-[12rem] max-w-[17rem]">
+                <p className="font-semibold text-tinta">{a.nombreCompleto}</p>
+                <p className="text-xs text-tinta/60">{[a.cedula ? `C.C. ${a.cedula}` : "Sin cédula", nombrePlan(a)].filter(Boolean).join(" · ")}</p>
+              </div>
+            ),
+          },
+          {
+            encabezado: "Cuota y valor asegurado",
+            orden: (a: ConSeguro) => a.seguroVida.precioMensual,
+            render: (a: ConSeguro) => (
+              <div className="whitespace-nowrap">
+                <p className="font-medium tabular-nums text-vino-700">{formatoPesos(a.seguroVida.precioMensual)} / mes</p>
+                <p className="text-xs tabular-nums text-tinta/60">Asegurado {formatoPesos(a.seguroVida.valorIndemnizacion)}</p>
+              </div>
+            ),
+          },
+          {
+            encabezado: "Vigencia",
             orden: (a: ConSeguro) => aMilisegundos(a.seguroVida.fechaInicio),
+            render: (a: ConSeguro) => (
+              <div>
+                <p className="tabular-nums text-tinta">Desde {formatoFecha(a.seguroVida.fechaInicio)}</p>
+                <p className="text-xs text-tinta/60">{ubicacionDe(a) || a.sede}</p>
+              </div>
+            ),
           },
-          { encabezado: "Cuota", render: (a: ConSeguro) => formatoPesos(a.seguroVida.precioMensual), orden: (a: ConSeguro) => a.seguroVida.precioMensual },
-          {
-            encabezado: "Indemnización",
-            render: (a: ConSeguro) => formatoPesos(a.seguroVida.valorIndemnizacion),
-            orden: (a: ConSeguro) => a.seguroVida.valorIndemnizacion,
-          },
-          { encabezado: "Ubicación", render: (a: ConSeguro) => ubicacionDe(a), orden: (a: ConSeguro) => ubicacionDe(a) },
           {
             encabezado: "Estado",
+            orden: (a: ConSeguro) => a.seguroVida.estado,
             render: (a: ConSeguro) => (
-              <span className={`rounded-full px-2.5 py-1 text-xs ${a.seguroVida.estado === "activo" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
-                {a.seguroVida.estado}
+              <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${a.seguroVida.estado === "activo" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
+                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${a.seguroVida.estado === "activo" ? "bg-green-600" : "bg-amber-500"}`} />
+                {a.seguroVida.estado === "activo" ? "al día" : "en mora"}
               </span>
             ),
           },
           {
             encabezado: "Beneficiarios",
             render: (a: ConSeguro) => (
-              <div className="space-y-1">
+              <div className="flex max-w-[16rem] flex-wrap gap-1">
                 {beneficiariosDelSeguro(a.seguroVida).map((b, i) => (
-                  <span key={i} className="block">
-                    {b.nombre} <span className="font-medium text-vino-700">· {b.porcentaje} %</span>
-                    <span className="block text-xs text-tinta/70">
-                      {[b.parentesco, b.edad != null ? `${b.edad} años` : null, b.cedula ? `C.C. ${b.cedula}` : null].filter(Boolean).join(" · ")}
-                    </span>
+                  <span
+                    key={i}
+                    title={[b.nombre, b.parentesco, b.edad != null ? `${b.edad} años` : null, b.cedula ? `C.C. ${b.cedula}` : null].filter(Boolean).join(" · ")}
+                    className="inline-flex items-center gap-1 rounded-full bg-vino-50 px-2 py-0.5 text-xs text-tinta"
+                  >
+                    {b.nombre.split(" ")[0]} <span className="font-semibold text-vino-700">{b.porcentaje}%</span>
                   </span>
                 ))}
               </div>
@@ -224,25 +261,18 @@ export default function SegurosVida() {
           {
             encabezado: "Acciones",
             render: (a: ConSeguro) => (
-              <div className="flex gap-2">
-                <button aria-label="Editar seguro" onClick={() => setEditando(a)} className="text-vino-700 hover:underline" title="Editar seguro"><Pencil size={14} aria-hidden="true" /></button>
-                <button aria-label="Acceso a la app" title="Acceso a la app" onClick={() => setAccesoAppDe(a)} className="text-vino-700 hover:underline"><Smartphone size={14} aria-hidden="true" /></button>
+              <div className="flex items-center gap-0.5">
+                <button aria-label="Editar seguro" title="Editar seguro" onClick={() => setEditando(a)} className="rounded-lg p-1.5 text-vino-700 hover:bg-vino-50"><Pencil size={16} aria-hidden="true" /></button>
+                <button aria-label="Pagos del seguro" title="Pagos del seguro" onClick={() => setPagosDe(a)} className="rounded-lg p-1.5 text-vino-700 hover:bg-vino-50"><Receipt size={16} aria-hidden="true" /></button>
+                <button aria-label="Acceso a la app" title="Acceso a la app" onClick={() => setAccesoAppDe(a)} className="rounded-lg p-1.5 text-vino-700 hover:bg-vino-50"><Smartphone size={16} aria-hidden="true" /></button>
                 {a.soloSeguro ? (
                   rol === "admin" && (
-                    <button aria-label="Eliminar titular" onClick={() => eliminarTitular(a)} className="text-red-600 hover:underline" title="Eliminar titular"><Trash2 size={14} aria-hidden="true" /></button>
+                    <button aria-label="Eliminar titular" title="Eliminar titular" onClick={() => eliminarTitular(a)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"><Trash2 size={16} aria-hidden="true" /></button>
                   )
                 ) : (
-                  <button aria-label="Quitar seguro" onClick={() => quitarSeguro(a)} className="text-red-600 hover:underline" title="Quitar seguro"><ShieldOff size={14} aria-hidden="true" /></button>
+                  <button aria-label="Quitar seguro" title="Quitar seguro" onClick={() => quitarSeguro(a)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"><ShieldOff size={16} aria-hidden="true" /></button>
                 )}
               </div>
-            ),
-          },
-          {
-            encabezado: "Pagos",
-            render: (a: ConSeguro) => (
-              <button onClick={() => setPagosDe(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
-                <Receipt size={14} /> Ver
-              </button>
             ),
           },
         ]}

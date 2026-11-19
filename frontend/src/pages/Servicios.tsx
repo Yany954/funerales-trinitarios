@@ -1,7 +1,8 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where, Timestamp } from "firebase/firestore";
-import { Plus, Trash2, ClipboardList, Copy, Check, Pencil } from "lucide-react";
+import { Plus, Trash2, ClipboardList, Copy, Check, Pencil, Paperclip, CalendarDays, FileText, CircleDollarSign } from "lucide-react";
+import Modal from "../components/Modal";
 import { Link, useSearchParams } from "react-router-dom";
 import { db, registrarServicio, actualizarServicio, eliminarServicio } from "../api/client";
 import DataTable from "../components/DataTable";
@@ -9,18 +10,20 @@ import SubirDocumento from "../components/SubirDocumento";
 import CampoPrecio from "../components/CampoPrecio";
 import { useRol } from "../auth/RolContext";
 import { confirmarEliminar } from "../utils/confirmar";
-import { formatoPesos } from "../utils/formato";
+import { formatoFecha, formatoPesos } from "../utils/formato";
 import type { Servicio, ItemServicio, TipoServicio, TipoTraslado, Convenio, TipoCofre, Flor, TarifaConvenio } from "../types";
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
 
+/** Colores por estado de facturación (mismos en Servicios y Facturación). */
+const ESTILO_FACTURACION: Record<string, { chip: string; punto: string }> = {
+  "pendiente por facturar": { chip: "bg-amber-50 text-amber-800", punto: "bg-amber-500" },
+  facturado: { chip: "bg-vino-50 text-vino-700", punto: "bg-vino-600" },
+  pagado: { chip: "bg-green-50 text-green-700", punto: "bg-green-600" },
+};
+
 function itemVacio(): ItemServicio {
   return { concepto: "", cantidad: 1, valorUnitario: 0, valorTotal: 0 };
-}
-
-function aFecha(valor: unknown): string {
-  if (valor instanceof Timestamp) return valor.toDate().toLocaleDateString("es-CO", { timeZone: "UTC" });
-  return "—";
 }
 
 function aInputDate(valor: unknown): string {
@@ -42,6 +45,7 @@ export default function Servicios() {
   const servicioEnfocado = searchParams.get("servicio");
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [filtroResumen, setFiltroResumen] = useState<"todos" | "mes" | "pendiente por facturar" | "facturado">("todos");
   const [editando, setEditando] = useState<Servicio | null>(null);
   const [items, setItems] = useState<ItemServicio[]>([itemVacio()]);
   const [documentos, setDocumentos] = useState<string[]>([]);
@@ -94,6 +98,15 @@ export default function Servicios() {
   }, [convenioIdForm]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
+
+  const hoyMs = new Date();
+  const delMes = servicios.filter((s) => {
+    const f = (s.fechaServicio as { toDate?: () => Date })?.toDate?.();
+    return !!f && f.getUTCFullYear() === hoyMs.getUTCFullYear() && f.getUTCMonth() === hoyMs.getUTCMonth();
+  });
+  const porEstado = (estado: Servicio["estadoFacturacion"]) => servicios.filter((s) => s.estadoFacturacion === estado);
+  const filtradosResumen =
+    filtroResumen === "todos" ? servicios : filtroResumen === "mes" ? delMes : porEstado(filtroResumen);
 
   function copiarId(id: string) {
     navigator.clipboard.writeText(id);
@@ -229,19 +242,54 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-vino-900">Servicios</h2>
-        <button onClick={abrirParaCrear} className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
-          <ClipboardList size={16} /> Nuevo servicio
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-2xl">
+          <h2 className="font-display text-2xl text-vino-900">Servicios</h2>
+          <p className="mt-1 text-sm text-tinta/70">
+            Cada servicio funerario prestado: a quién, con qué convenio, cuánto costó y en qué va su cobro.
+          </p>
+        </div>
+        <button
+          onClick={abrirParaCrear}
+          className="flex min-h-[44px] items-center gap-2 rounded-lg bg-vino-700 px-4 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px"
+        >
+          <ClipboardList size={16} aria-hidden="true" /> Nuevo servicio
         </button>
-      </div>
+      </header>
+
+      {!servicioEnfocado && servicios.length > 0 && (
+        <section aria-label="Resumen" className="grid gap-3 sm:grid-cols-3">
+          {([
+            { clave: "mes", titulo: "Este mes", icono: CalendarDays, lista: delMes, clase: "text-vino-900" },
+            { clave: "pendiente por facturar", titulo: "Por facturar", icono: FileText, lista: porEstado("pendiente por facturar"), clase: "text-amber-700" },
+            { clave: "facturado", titulo: "Pendientes de pago", icono: CircleDollarSign, lista: porEstado("facturado"), clase: "text-vino-700" },
+          ] as const).map((c) => {
+            const activo = filtroResumen === c.clave;
+            const Icono = c.icono;
+            return (
+              <button
+                key={c.clave}
+                onClick={() => setFiltroResumen(activo ? "todos" : c.clave)}
+                aria-pressed={activo}
+                className={`rounded-2xl border bg-white p-5 text-left transition hover:shadow-md ${activo ? "border-vino-600 ring-2 ring-vino-100" : "border-vino-100"}`}
+              >
+                <p className="flex items-center gap-2 text-sm text-tinta/70"><Icono size={16} aria-hidden="true" /> {c.titulo}</p>
+                <p className={`mt-1 font-display text-3xl tabular-nums ${c.clase}`}>{c.lista.length}</p>
+                <p className="text-sm tabular-nums text-tinta/70">{formatoPesos(c.lista.reduce((t, s) => t + (s.valorTotal ?? 0), 0))}</p>
+              </button>
+            );
+          })}
+        </section>
+      )}
 
       {mostrarFormulario && (
-        <form onSubmit={manejarGuardar} className="space-y-4 rounded-xl border border-vino-100 bg-white p-4">
-          <p className="text-sm font-medium text-vino-900">
-            {editando ? `Editando servicio de ${editando.fallecido.nombreCompleto}` : "Nuevo servicio"}
-          </p>
+        <Modal
+          titulo={editando ? `Editar servicio de ${editando.fallecido.nombreCompleto}` : "Nuevo servicio"}
+          onCerrar={() => { setMostrarFormulario(false); setEditando(null); setError(null); }}
+          ancho="max-w-4xl"
+        >
+        <form onSubmit={manejarGuardar} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <input name="fechaServicio" type="date" min="1900-01-01" max="2100-12-31" required defaultValue={editando ? aInputDate(editando.fechaServicio) : undefined} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             {!editando && (
@@ -371,13 +419,12 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             <button type="submit" disabled={guardando} className="rounded-lg bg-vino-700 px-4 py-2 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
               {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar servicio"}
             </button>
-            {editando && (
-              <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">
-                Cancelar
-              </button>
-            )}
+            <button type="button" onClick={() => { setMostrarFormulario(false); setEditando(null); setError(null); }} className="rounded-lg border border-vino-100 px-4 py-2 text-sm text-tinta/70">
+              Cancelar
+            </button>
           </div>
         </form>
+        </Modal>
       )}
 
       {servicioEnfocado && (
@@ -396,27 +443,37 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
       <DataTable
         columnas={[
           {
-            encabezado: "ID",
+            encabezado: "Servicio",
+            orden: (s: Servicio) => s.fallecido.nombreCompleto,
             render: (s: Servicio) => (
-              <button onClick={() => copiarId(s.id)} className="flex items-center gap-1 font-mono text-xs text-tinta/70 hover:text-vino-700">
-                {s.id.slice(0, 8)}…
-                {idCopiado === s.id ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-              </button>
+              <div className="min-w-[12rem] max-w-[18rem]">
+                <p className="font-semibold text-tinta">{s.fallecido.nombreCompleto}</p>
+                <p className="text-xs text-tinta/60">{formatoFecha(s.fechaServicio)} · {s.sede}</p>
+              </div>
             ),
           },
-          { encabezado: "Fecha", render: (s: Servicio) => aFecha(s.fechaServicio) },
-          { encabezado: "Sede", render: (s: Servicio) => s.sede },
-          { encabezado: "Fallecido", render: (s: Servicio) => s.fallecido.nombreCompleto },
-          { encabezado: "Convenio", render: (s: Servicio) => convenios.find((c) => c.id === s.convenioId)?.nombre ?? "Sin convenio" },
-          { encabezado: "Valor", render: (s: Servicio) => formatoPesos(s.valorTotal) },
+          {
+            encabezado: "Convenio",
+            orden: (s: Servicio) => convenios.find((c) => c.id === s.convenioId)?.nombre,
+            render: (s: Servicio) => (
+              <div>
+                <p className="text-tinta">{convenios.find((c) => c.id === s.convenioId)?.nombre ?? "Sin convenio"}</p>
+                <p className="text-xs capitalize text-tinta/60">{s.tipoServicio}</p>
+              </div>
+            ),
+          },
+          {
+            encabezado: "Valor",
+            orden: (s: Servicio) => s.valorTotal,
+            render: (s: Servicio) => <span className="whitespace-nowrap font-semibold tabular-nums text-tinta">{formatoPesos(s.valorTotal)}</span>,
+          },
           {
             encabezado: "Facturación",
+            orden: (s: Servicio) => s.estadoFacturacion,
             render: (s: Servicio) => (
-              <Link to="/facturacion" className={`rounded-full px-2.5 py-1 text-xs hover:underline ${s.estadoFacturacion === "pagado" ? "bg-green-50 text-green-700"
-                  : s.estadoFacturacion === "facturado" ? "bg-blue-50 text-blue-700"
-                    : "bg-amber-50 text-amber-700"
-                }`}>
-                {s.estadoFacturacion}
+              <Link to="/facturacion" title="Ir a Facturación" className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium hover:underline ${ESTILO_FACTURACION[s.estadoFacturacion]?.chip ?? ""}`}>
+                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${ESTILO_FACTURACION[s.estadoFacturacion]?.punto ?? ""}`} />
+                {s.estadoFacturacion === "facturado" ? "pendiente de pago" : s.estadoFacturacion}
               </Link>
             ),
           },
@@ -424,24 +481,29 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             encabezado: "Documentos",
             render: (s: Servicio) =>
               s.documentosAdjuntos?.length ? (
-                <a href={s.documentosAdjuntos[0]} target="_blank" rel="noreferrer" className="text-vino-700 hover:underline">Ver ({s.documentosAdjuntos.length})</a>
+                <a href={s.documentosAdjuntos[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-vino-50 px-2.5 py-1 text-xs font-medium text-vino-700 hover:bg-vino-100" title="Abrir el primer documento">
+                  <Paperclip size={12} aria-hidden="true" /> {s.documentosAdjuntos.length}
+                </a>
               ) : (
-                <span className="text-xs text-tinta/70">—</span>
+                <span className="text-xs text-tinta/40">—</span>
               ),
           },
           {
-            encabezado: "",
+            encabezado: "Acciones",
             render: (s: Servicio) => (
-              <div className="flex gap-2">
-                <button aria-label="Editar" onClick={() => abrirParaEditar(s)} className="text-vino-700 hover:underline"><Pencil size={14} aria-hidden="true" /></button>
+              <div className="flex items-center gap-0.5">
+                <button aria-label="Editar" title="Editar" onClick={() => abrirParaEditar(s)} className="rounded-lg p-1.5 text-vino-700 hover:bg-vino-50"><Pencil size={16} aria-hidden="true" /></button>
+                <button aria-label="Copiar ID del servicio" title="Copiar ID (para registrar la bóveda)" onClick={() => copiarId(s.id)} className="rounded-lg p-1.5 text-vino-700 hover:bg-vino-50">
+                  {idCopiado === s.id ? <Check size={16} className="text-green-600" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+                </button>
                 {rol === "admin" && (
-                  <button aria-label="Eliminar" onClick={() => manejarEliminar(s)} className="text-red-600 hover:underline"><Trash2 size={14} aria-hidden="true" /></button>
+                  <button aria-label="Eliminar" title="Eliminar" onClick={() => manejarEliminar(s)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"><Trash2 size={16} aria-hidden="true" /></button>
                 )}
               </div>
             ),
           },
         ]}
-        filas={servicioEnfocado ? servicios.filter((s) => s.id === servicioEnfocado) : servicios}
+        filas={servicioEnfocado ? servicios.filter((s) => s.id === servicioEnfocado) : filtradosResumen}
         cargando={cargando}
         claveFila={(s) => s.id}
         vacioTitulo="Todavía no hay servicios registrados"
