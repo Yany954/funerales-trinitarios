@@ -55,7 +55,11 @@ const [usarValorManual, setUsarValorManual] = useState(false);
 const [municipioForm, setMunicipioForm] = useState("Pailitas");
 
 useEffect(() => {
-  return onSnapshot(query(collection(db, "items_boveda")), (snap) => setItemsBoveda(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ItemBoveda))));
+  return onSnapshot(
+    query(collection(db, "items_boveda")),
+    (snap) => setItemsBoveda(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ItemBoveda))),
+    (err) => console.error("Error cargando el catálogo de bóvedas:", err)
+  );
 }, []);
 
   useEffect(() => {

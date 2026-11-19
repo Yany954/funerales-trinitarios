@@ -10,7 +10,7 @@
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
     "deploy": "firebase deploy --only functions",
     "lint": "eslint src --ext .ts",
-    "test": "tsx --test tests/cuenta-app.test.ts tests/registro-cuenta.test.ts",
+    "test": "tsx --test tests/cuenta-app.test.ts tests/registro-cuenta.test.ts tests/funciones-web-app.test.ts",
     "test:reglas": "firebase emulators:exec --only firestore --project demo-reglas-afiliado \"tsx --test tests/reglas-afiliado.test.ts\""
   },
   "engines": {

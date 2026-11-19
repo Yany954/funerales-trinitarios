@@ -67,9 +67,22 @@ export default function Servicios() {
     );
   }, [sedeSeleccionada, cargandoRol, carga.intento]);
 
-  useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
-  useEffect(() => onSnapshot(query(collection(db, "tipos_cofre")), (s) => setCofres(s.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre)))), []);
-  useEffect(() => onSnapshot(query(collection(db, "flores")), (s) => setFlores(s.docs.map((d) => ({ id: d.id, ...d.data() } as Flor)))), []);
+  // Catálogos del formulario: si fallan, el formulario sigue funcionando con listas vacías.
+  useEffect(() => onSnapshot(
+    query(collection(db, "convenios")),
+    (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio))),
+    (err) => console.error("Error cargando convenios:", err)
+  ), []);
+  useEffect(() => onSnapshot(
+    query(collection(db, "tipos_cofre")),
+    (s) => setCofres(s.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre))),
+    (err) => console.error("Error cargando tipos de cofre:", err)
+  ), []);
+  useEffect(() => onSnapshot(
+    query(collection(db, "flores")),
+    (s) => setFlores(s.docs.map((d) => ({ id: d.id, ...d.data() } as Flor))),
+    (err) => console.error("Error cargando flores:", err)
+  ), []);
 
   useEffect(() => {
     if (!convenioIdForm) { setTarifaConvenio(null); return; }

@@ -60,15 +60,20 @@ export default function SegurosVida() {
   const [accesoAppDe, setAccesoAppDe] = useState<ConSeguro | null>(null);
 
   useEffect(() => {
-    return onSnapshot(query(collection(db, "planes_funerarios")), (snap) => {
-      const mapa: Record<string, string> = {};
-      snap.docs.forEach((d) => (mapa[d.id] = (d.data() as PlanFunerario).nombre));
-      setMapaPlanes(mapa);
-    });
+    return onSnapshot(
+      query(collection(db, "planes_funerarios")),
+      (snap) => {
+        const mapa: Record<string, string> = {};
+        snap.docs.forEach((d) => (mapa[d.id] = (d.data() as PlanFunerario).nombre));
+        setMapaPlanes(mapa);
+      },
+      (err) => console.error("Error cargando planes:", err)
+    );
   }, []);
 
   // Misma consulta que Afiliados (ya tiene índice); el filtro de seguro se hace aquí.
   useEffect(() => {
+    if (cargandoRol) return;
     const base = collection(db, "afiliados");
     const q = sedeSeleccionada === "all"
       ? query(base, orderBy("nombreCompleto"))
@@ -82,7 +87,7 @@ export default function SegurosVida() {
       },
       (err) => carga.fallo(err)
     );
-  }, [sedeSeleccionada, carga.intento]);
+  }, [sedeSeleccionada, cargandoRol, carga.intento]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
 

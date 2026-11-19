@@ -4,6 +4,7 @@ import { Warehouse } from "lucide-react";
 import { db, actualizarInventario } from "../api/client";
 import DataTable from "../components/DataTable";
 import { useRol } from "../auth/RolContext";
+import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import type { InventarioCofre, TipoCofre } from "../types";
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
@@ -18,27 +19,33 @@ export default function Inventario() {
 
   const [cofres, setCofres] = useState<TipoCofre[]>([]);
   const [inventario, setInventario] = useState<InventarioCofre[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const carga = useEstadoCarga();
+  const { cargando } = carga;
   const [sedeFormulario, setSedeFormulario] = useState<string>(""); // sede a la que se le va a actualizar cantidad
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    return onSnapshot(query(collection(db, "tipos_cofre")), (snap) =>
-      setCofres(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre)))
+    return onSnapshot(
+      query(collection(db, "tipos_cofre")),
+      (snap) => setCofres(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TipoCofre))),
+      (err) => console.error("Error cargando tipos de cofre:", err)
     );
   }, []);
 
   useEffect(() => {
-    if (!sedeActiva) return;
-    setCargando(true);
+    if (cargandoRol || !sedeActiva) return;
     const base = collection(db, "inventario_cofres");
     const q = sedeActiva === "all" ? query(base) : query(base, where("sede", "==", sedeActiva));
-    return onSnapshot(q, (snap) => {
-      setInventario(snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventarioCofre)));
-      setCargando(false);
-    });
-  }, [sedeActiva]);
+    return onSnapshot(
+      q,
+      (snap) => {
+        setInventario(snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventarioCofre)));
+        carga.listo();
+      },
+      (err) => carga.fallo(err)
+    );
+  }, [sedeActiva, cargandoRol, carga.intento]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
 
@@ -102,6 +109,7 @@ export default function Inventario() {
           {guardando ? "Guardando…" : "Actualizar cantidad"}
         </button>
       </form>
+      <AvisoCarga carga={carga} />
       {sedeActiva === "all" && (
         <p className="text-xs text-amber-700">
           Estás viendo el resumen de todas las sedes — para actualizar una cantidad, elige primero la sede específica arriba en el formulario.

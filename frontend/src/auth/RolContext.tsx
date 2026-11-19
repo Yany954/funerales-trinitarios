@@ -21,6 +21,7 @@ export function RolProvider({ user, children }: { user: User; children: ReactNod
   const [sedeSeleccionada, setSedeSeleccionada] = useState<Sede | "all">("Pailitas");
   const [cargando, setCargando] = useState(true);
   const [sinAcceso, setSinAcceso] = useState(false);
+  const [sinConexion, setSinConexion] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -56,7 +57,10 @@ export function RolProvider({ user, children }: { user: User; children: ReactNod
         }
       } catch (err) {
         console.error("No se pudo leer el rol del usuario:", err);
-        if (!cancelado && intento < 5) setTimeout(() => cargar(intento + 1), 2000 * (intento + 1));
+        if (cancelado) return;
+        if (intento < 5) setTimeout(() => cargar(intento + 1), 2000 * (intento + 1));
+        // Agotados los reintentos: se muestra el problema en vez de "Cargando…" eterno.
+        else setSinConexion(true);
       }
     };
     cargar(0);
@@ -64,6 +68,23 @@ export function RolProvider({ user, children }: { user: User; children: ReactNod
       cancelado = true;
     };
   }, [user]);
+
+  if (sinConexion) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-crema p-6">
+        <div role="alert" className="max-w-md rounded-2xl border border-vino-100 bg-white p-6 text-center">
+          <h1 className="font-display text-xl text-vino-900">No se pudo cargar tu cuenta</h1>
+          <p className="mt-2 text-sm text-tinta/70">Parece que no hay conexión a internet. Revisa la conexión y vuelve a intentar.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-5 min-h-[44px] rounded-lg bg-vino-700 px-5 text-sm font-medium text-white hover:bg-vino-600"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (sinAcceso) {
     return (

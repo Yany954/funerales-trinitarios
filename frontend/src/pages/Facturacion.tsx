@@ -27,7 +27,11 @@ export default function Facturacion() {
   const estadoInicial = (searchParams.get("estado") as EstadoFacturacion | null) ?? "todos";
   const [filtroEstado, setFiltroEstado] = useState<EstadoFacturacion | "todos">(estadoInicial);
 
-  useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
+  useEffect(() => onSnapshot(
+    query(collection(db, "convenios")),
+    (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio))),
+    (err) => console.error("Error cargando convenios:", err)
+  ), []);
 
   useEffect(() => {
     if (cargandoRol || !sedeActiva) return;

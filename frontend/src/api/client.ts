@@ -188,11 +188,6 @@ export async function deshacerNovedadBeneficiario(input: DeshacerNovedadBenefici
   const fn = httpsCallable<DeshacerNovedadBeneficiarioInput, { afiliado: Afiliado }>(functions, "deshacerNovedadBeneficiarioFn");
   return (await fn(input)).data.afiliado;
 }
-export async function reindexarPersonasCubiertas(): Promise<{ ok: boolean; total: number }> {
-  const fn = httpsCallable<void, { ok: boolean; total: number }>(functions, "reindexarPersonasCubiertasFn");
-  const res = await fn();
-  return res.data;
-}
 
 // ============================================================
 // Planes funerarios
@@ -361,12 +356,6 @@ export async function listarServiciosPorAfiliado(cedula: string): Promise<Servic
 // ============================================================
 // Facturación
 // ============================================================
-
-export async function actualizarEstadoFacturacion(id: string, estado: Servicio["estadoFacturacion"]): Promise<Servicio> {
-  const fn = httpsCallable<{ id: string; estado: Servicio["estadoFacturacion"] }, { servicio: Servicio }>(functions, "actualizarEstadoFacturacionFn");
-  const res = await fn({ id, estado });
-  return res.data.servicio;
-}
 
 export async function cambiarEstadoFacturacion(input: CambiarEstadoFacturacionInput): Promise<Servicio> {
   const fn = httpsCallable<CambiarEstadoFacturacionInput, { servicio: Servicio }>(functions, "cambiarEstadoFacturacionFn");

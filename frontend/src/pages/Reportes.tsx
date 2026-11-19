@@ -166,7 +166,11 @@ function ReportePorConvenio() {
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => onSnapshot(query(collection(db, "convenios")), (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio)))), []);
+  useEffect(() => onSnapshot(
+    query(collection(db, "convenios")),
+    (s) => setConvenios(s.docs.map((d) => ({ id: d.id, ...d.data() } as Convenio))),
+    (err) => console.error("Error cargando convenios:", err)
+  ), []);
   const opciones = filtroTipo === "alcaldia" ? convenios.filter((c) => c.tipo === "alcaldia") : convenios.filter((c) => c.tipo === "empresa_exequial");
 
   async function manejarGenerar(e: FormEvent<HTMLFormElement>) {
