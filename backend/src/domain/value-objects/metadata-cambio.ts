@@ -8,7 +8,7 @@
  * escritura que no venga del Admin SDK (ver /firestore.rules).
  */
 
-export type CanalCambio = "dashboard-web" | "whatsapp-bot" | "agente-voz" | "scheduler";
+export type CanalCambio = "dashboard-web" | "app-afiliado" | "whatsapp-bot" | "agente-voz" | "scheduler";
 export type TipoAutor = "humano" | "ia";
 
 export interface MetadataCambio {
@@ -25,6 +25,11 @@ export function metadataHumano(uid: string): MetadataCambio {
 }
 
 /** Construye la metadata para un cambio hecho automáticamente por un agente de IA. */
-export function metadataIA(canal: Exclude<CanalCambio, "dashboard-web">, identificadorAgente: string): MetadataCambio {
+export function metadataIA(canal: Exclude<CanalCambio, "dashboard-web" | "app-afiliado">, identificadorAgente: string): MetadataCambio {
   return { tipo: "ia", canal, identificador: identificadorAgente, fecha: new Date() };
+}
+
+/** Construye la metadata para un cambio pedido por el propio titular desde la app móvil. */
+export function metadataAfiliado(uid: string): MetadataCambio {
+  return { tipo: "humano", canal: "app-afiliado", identificador: uid, fecha: new Date() };
 }

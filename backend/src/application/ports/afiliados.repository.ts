@@ -17,4 +17,6 @@ export interface AfiliadosRepository {
   actualizarUltimoPago(afiliadoId: string, ultimoPago: { fecha: Date; valor: number; metodo: string }, metadata: MetadataCambio): Promise<void>;
   actualizar(id: string, cambios: Partial<Omit<Afiliado, "id">>): Promise<Afiliado>;
   eliminar(id: string): Promise<void>;
+  /** Titulares (con plan o solo seguro) cuya cédula coincide, sin importar puntos o espacios. */
+  buscarTitularesPorCedula(cedula: string): Promise<Afiliado[]>;
 }

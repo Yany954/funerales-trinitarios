@@ -487,3 +487,18 @@ export async function cambiarEstadoUsuario(uid: string, deshabilitado: boolean):
   const fn = httpsCallable<{ uid: string; deshabilitado: boolean }, { ok: boolean }>(functions, "cambiarEstadoUsuarioFn");
   await fn({ uid, deshabilitado });
 }
+// ============================================================
+// Acceso de titulares a la app móvil
+// ============================================================
+
+/** Código de un solo uso para que el titular active la app sin número de contrato. */
+export async function generarCodigoActivacion(afiliadoId: string): Promise<{ codigo: string; expira: string }> {
+  const fn = httpsCallable<{ afiliadoId: string }, { codigo: string; expira: string }>(functions, "generarCodigoActivacionFn");
+  return (await fn({ afiliadoId })).data;
+}
+
+/** Borra la cuenta de la app (olvidó el PIN); el titular vuelve a registrarse. */
+export async function restablecerAccesoApp(afiliadoId: string): Promise<void> {
+  const fn = httpsCallable<{ afiliadoId: string }, { ok: boolean }>(functions, "restablecerAccesoAppFn");
+  await fn({ afiliadoId });
+}

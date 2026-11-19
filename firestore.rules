@@ -11,10 +11,29 @@ service cloud.firestore {
     function esAdmin() { return request.auth.token.rol == "admin"; }
     function miSede() { return request.auth.token.sede; }
 
+    // Titular de la app móvil: solo puede leer LO SUYO. Su afiliadoId viene
+    // del token (lo pone el backend al registrarse), no de lo que mande la app.
+    function esAfiliadoDueno(afiliadoId) {
+      return request.auth != null
+        && request.auth.token.rol == 'afiliado'
+        && request.auth.token.afiliadoId == afiliadoId;
+    }
+
     match /afiliados/{id} {
-      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow read: if (estaAutenticado() && (esAdmin() || resource.data.sede == miSede()))
+        || esAfiliadoDueno(id);
       allow write: if false;
     }
+
+    // Vínculo titular ↔ cuenta de la app. El staff ve si ya tiene cuenta.
+    match /cuentas_afiliado/{afiliadoId} {
+      allow read: if (estaAutenticado() && (esAdmin() || resource.data.sede == miSede()))
+        || esAfiliadoDueno(afiliadoId);
+      allow write: if false;
+    }
+    // Solo el backend: hashes de códigos e intentos fallidos.
+    match /codigos_activacion/{id}     { allow read, write: if false; }
+    match /intentos_registro_app/{id}  { allow read, write: if false; }
     match /servicios/{id} {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;

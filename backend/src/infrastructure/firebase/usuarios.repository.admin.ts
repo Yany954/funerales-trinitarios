@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { ClaimsUsuario } from "../../domain/value-objects/rol-usuario";
+import { ClaimsUsuario, ROL_AFILIADO } from "../../domain/value-objects/rol-usuario";
 import { UsuariosRepository, UsuarioListado } from "../../application/ports/usuarios.repository";
 
 export class UsuariosRepositoryAdmin implements UsuariosRepository {
@@ -13,15 +13,27 @@ export class UsuariosRepositoryAdmin implements UsuariosRepository {
   }
 
   async listar(): Promise<UsuarioListado[]> {
-    const resultado = await getAuth().listUsers(1000);
-    return resultado.users.map((u) => ({
-      uid: u.uid,
-      email: u.email ?? "",
-      nombre: u.displayName ?? "(sin nombre)",
-      rol: (u.customClaims?.rol as string) ?? "empleado",
-      sede: (u.customClaims?.sede as string) ?? "—",
-      deshabilitado: u.disabled,
-    }));
+    // Se recorren todas las páginas: con la app, las cuentas de afiliados
+    // pueden ser miles, y el staff no debe quedar fuera de la primera página.
+    const usuarios: UsuarioListado[] = [];
+    let pagina: string | undefined;
+    do {
+      const resultado = await getAuth().listUsers(1000, pagina);
+      for (const u of resultado.users) {
+        // Las cuentas de la app de afiliados no son usuarios del dashboard.
+        if (u.customClaims?.rol === ROL_AFILIADO) continue;
+        usuarios.push({
+          uid: u.uid,
+          email: u.email ?? "",
+          nombre: u.displayName ?? "(sin nombre)",
+          rol: (u.customClaims?.rol as string) ?? "empleado",
+          sede: (u.customClaims?.sede as string) ?? "—",
+          deshabilitado: u.disabled,
+        });
+      }
+      pagina = resultado.pageToken;
+    } while (pagina);
+    return usuarios;
   }
 
   async asignarClaims(uid: string, claims: ClaimsUsuario): Promise<void> {

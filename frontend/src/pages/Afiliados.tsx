@@ -1,7 +1,8 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList } from "lucide-react";
+import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList, Smartphone } from "lucide-react";
+import PanelAccesoApp from "../components/PanelAccesoApp";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
 import type { Afiliado, BeneficiarioEntrada, PersonaCubierta, PlanFunerario, ResultadoBusquedaAfiliado, Sede } from "../types";
@@ -42,6 +43,7 @@ export default function Afiliados() {
   const [resultadosBusqueda, setResultadosBusqueda] = useState<ResultadoBusquedaAfiliado[] | null>(null);
   const [afiliadoEditando, setAfiliadoEditando] = useState<Afiliado | null>(null);
   const [afiliadoServicios, setAfiliadoServicios] = useState<Afiliado | null>(null);
+  const [afiliadoAccesoApp, setAfiliadoAccesoApp] = useState<Afiliado | null>(null);
   const [sedeForm, setSedeForm] = useState<string>("");
   const [planForm, setPlanForm] = useState<string>("");
   const [conSeguroForm, setConSeguroForm] = useState(false);
@@ -402,6 +404,7 @@ export default function Afiliados() {
             render: (a: Afiliado) => (
               <div className="flex gap-2">
                 <button aria-label="Editar" onClick={() => setAfiliadoEditando(a)} className="text-vino-700 hover:underline"><Pencil size={14} aria-hidden="true" /></button>
+                <button aria-label="Acceso a la app" title="Acceso a la app" onClick={() => setAfiliadoAccesoApp(a)} className="text-vino-700 hover:underline"><Smartphone size={14} aria-hidden="true" /></button>
                 {rol === "admin" && (
                   <button aria-label="Eliminar" onClick={() => manejarEliminarAfiliado(a)} className="text-red-600 hover:underline"><Trash2 size={14} aria-hidden="true" /></button>
                 )}
@@ -435,6 +438,7 @@ export default function Afiliados() {
       {afiliadoEditando && <PanelEditarAfiliado afiliado={afiliadoEditando} planes={planes} onCerrar={() => setAfiliadoEditando(null)} />}
       {afiliadoBeneficiarios && <PanelBeneficiarios afiliado={afiliadoBeneficiarios} limite={limitePlan(afiliadoBeneficiarios.planId, afiliadoBeneficiarios.sede)} onCerrar={() => setAfiliadoBeneficiarios(null)} />}
       {afiliadoPagos && <PanelPagos afiliado={afiliadoPagos} onCerrar={() => setAfiliadoPagos(null)} />}
+      {afiliadoAccesoApp && <PanelAccesoApp afiliado={afiliadoAccesoApp} onCerrar={() => setAfiliadoAccesoApp(null)} />}
     </div>
   );
 }

@@ -2,7 +2,8 @@ import { useEffect, useState, FormEvent } from "react";
 import { useDialogo } from "../hooks/useDialogo";
 import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Pencil, Receipt, ShieldOff, X, Save, Plus, Trash2, Search } from "lucide-react";
+import { Pencil, Receipt, ShieldOff, X, Save, Plus, Trash2, Search, Smartphone } from "lucide-react";
+import PanelAccesoApp from "../components/PanelAccesoApp";
 import { db, actualizarAfiliado, guardarSeguroVida, crearTitularSeguro, eliminarAfiliado } from "../api/client";
 import DataTable from "../components/DataTable";
 import PanelPagos from "../components/PanelPagos";
@@ -56,6 +57,7 @@ export default function SegurosVida() {
   const [filtroEstado, setFiltroEstado] = useState<"todos" | SeguroVida["estado"]>("todos");
   const [editando, setEditando] = useState<ConSeguro | null>(null);
   const [pagosDe, setPagosDe] = useState<ConSeguro | null>(null);
+  const [accesoAppDe, setAccesoAppDe] = useState<ConSeguro | null>(null);
 
   useEffect(() => {
     return onSnapshot(query(collection(db, "planes_funerarios")), (snap) => {
@@ -219,6 +221,7 @@ export default function SegurosVida() {
             render: (a: ConSeguro) => (
               <div className="flex gap-2">
                 <button aria-label="Editar seguro" onClick={() => setEditando(a)} className="text-vino-700 hover:underline" title="Editar seguro"><Pencil size={14} aria-hidden="true" /></button>
+                <button aria-label="Acceso a la app" title="Acceso a la app" onClick={() => setAccesoAppDe(a)} className="text-vino-700 hover:underline"><Smartphone size={14} aria-hidden="true" /></button>
                 {a.soloSeguro ? (
                   rol === "admin" && (
                     <button aria-label="Eliminar titular" onClick={() => eliminarTitular(a)} className="text-red-600 hover:underline" title="Eliminar titular"><Trash2 size={14} aria-hidden="true" /></button>
@@ -253,6 +256,7 @@ export default function SegurosVida() {
         />
       )}
       {pagosDe && <PanelPagos afiliado={pagosDe} tipo="seguro" onCerrar={() => setPagosDe(null)} />}
+      {accesoAppDe && <PanelAccesoApp afiliado={accesoAppDe} onCerrar={() => setAccesoAppDe(null)} />}
     </div>
   );
 }

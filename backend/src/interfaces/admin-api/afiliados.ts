@@ -8,6 +8,9 @@ import { PlanesRepositoryFirestore } from "../../infrastructure/firebase/plan.re
 import { COLECCION_PAGOS_SEGURO, PagosRepositoryFirestore } from "../../infrastructure/firebase/pago.repository.firestore";
 import { guardarSeguroVida } from "../../application/seguros/seguroVida";
 import { recalcularAfiliadoDesdePagos } from "../../application/pagos/recalcularAfiliadoDesdePagos";
+import { CuentasAfiliadoRepositoryFirestore } from "../../infrastructure/firebase/cuentas-afiliado.repository.firestore";
+import { AuthAfiliadosAdmin } from "../../infrastructure/auth/auth-afiliados.admin";
+import { restablecerAccesoApp } from "../../application/cuentas-afiliado/restablecerAccesoApp.usecase";
 
 import { crearAfiliado, CrearAfiliadoInput } from "../../application/afiliados/crear-afiliado.usecase";
 import { buscarPersonaCubierta } from "../../application/afiliados/buscar-persona-cubierta.usecase";
@@ -156,6 +159,13 @@ export const eliminarAfiliadoFn = onCall<{ id: string }>(async (request) => {
     throw new HttpsError("permission-denied", "Solo un administrador puede eliminar afiliados.");
   }
   await ejecutar(() => eliminarAfiliado(repo, request.data.id));
+  // Si tenía cuenta en la app, se borra también: si no, quedaría una cuenta huérfana.
+  const cuentasRepo = new CuentasAfiliadoRepositoryFirestore();
+  if (await cuentasRepo.obtenerCuenta(request.data.id)) {
+    await restablecerAccesoApp(cuentasRepo, new AuthAfiliadosAdmin(), request.data.id).catch((err) =>
+      console.error("No se pudo borrar la cuenta de la app del afiliado eliminado:", err)
+    );
+  }
   return { ok: true };
 });
 

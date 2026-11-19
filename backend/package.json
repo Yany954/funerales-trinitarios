@@ -10,7 +10,8 @@
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
     "deploy": "firebase deploy --only functions",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"agregar tests en /tests cuando el equipo lo necesite\" && exit 0"
+    "test": "tsx --test tests/cuenta-app.test.ts tests/registro-cuenta.test.ts",
+    "test:reglas": "firebase emulators:exec --only firestore --project demo-reglas-afiliado \"tsx --test tests/reglas-afiliado.test.ts\""
   },
   "engines": {
     "node": "22"
@@ -20,9 +21,11 @@
     "firebase-functions": "^7.3.2"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@typescript-eslint/eslint-plugin": "^8.5.0",
     "@typescript-eslint/parser": "^8.5.0",
     "eslint": "^8.57.0",
+    "firebase": "^13.4.0",
     "tsx": "^4.23.13",
     "typescript": "^5.5.4"
   }

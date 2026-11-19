@@ -19,3 +19,6 @@ export {
   generarEnlaceInvitacionFn,
   cambiarEstadoUsuarioFn,
 } from "./admin-api/usuarios";
+// ---------- App móvil de afiliados ----------
+export { generarCodigoActivacionFn, restablecerAccesoAppFn } from "./admin-api/acceso-app";
+export { registrarCuentaAfiliadoFn } from "./afiliados-api/cuenta";

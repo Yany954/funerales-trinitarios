@@ -18,3 +18,19 @@ export function requireAuth(request: CallableRequest): string {
   }
   return request.auth.uid;
 }
+
+/**
+ * Para las callables de la app móvil (afiliados-api): exige sesión con rol
+ * "afiliado" y devuelve SU afiliadoId, sacado del token — nunca del input,
+ * para que nadie pueda pedir datos de otro titular cambiando un parámetro.
+ */
+export function requireAfiliado(request: CallableRequest): { uid: string; afiliadoId: string } {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión para hacer esto.");
+  }
+  const { rol, afiliadoId } = request.auth.token;
+  if (rol !== "afiliado" || typeof afiliadoId !== "string" || !afiliadoId) {
+    throw new HttpsError("permission-denied", "Esta cuenta no está vinculada a una afiliación.");
+  }
+  return { uid: request.auth.uid, afiliadoId };
+}

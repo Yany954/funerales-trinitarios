@@ -5,6 +5,7 @@ import { AfiliadosRepository } from "../../application/ports/afiliados.repositor
 import { MetadataCambio } from "../../domain/value-objects/metadata-cambio";
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
 import { normalizarCedula } from "../../domain/value-objects/cedula";
+import { variantesCedula } from "../../domain/value-objects/cuenta-app";
 
 const AFILIADOS = "afiliados";
 const PERSONAS_CUBIERTAS = "personas_cubiertas";
@@ -230,5 +231,25 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     return snap.docs
       .map((d) => ({ id: d.id, ...(d.data() as Omit<PersonaCubierta, "id">) }))
       .filter((p) => palabras.every((palabra) => p.palabrasNombre?.includes(palabra)));
+  }
+
+  async buscarTitularesPorCedula(cedula: string): Promise<Afiliado[]> {
+    const ids = new Set<string>();
+    // 1) Titulares con plan: personas_cubiertas ya tiene la cédula sin puntos.
+    const normalizada = normalizarCedula(cedula);
+    if (normalizada) {
+      const indexados = await db.collection(PERSONAS_CUBIERTAS)
+        .where("cedulaBusqueda", "==", normalizada)
+        .where("esTitular", "==", true)
+        .get();
+      indexados.docs.forEach((d) => ids.add(d.data().afiliadoId));
+    }
+    // 2) Titulares de solo seguro (no están indexados) o registros viejos:
+    //    la cédula tal como se escribió en el afiliado, con o sin puntos.
+    const directos = await db.collection(AFILIADOS).where("cedula", "in", variantesCedula(cedula)).get();
+    directos.docs.forEach((d) => ids.add(d.id));
+
+    const afiliados = await Promise.all([...ids].map((id) => this.obtenerPorId(id)));
+    return afiliados.filter((a): a is Afiliado => a !== null && normalizarCedula(a.cedula) === normalizada);
   }
 }
