@@ -49,6 +49,12 @@ service cloud.firestore {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;
     }
+    // Pagos del seguro de vida: misma regla que "pagos" (antes no tenía regla y
+    // la gráfica de Inicio fallaba con "No matching allow statements").
+    match /pagos_seguro_vida/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
+      allow write: if false;
+    }
     match /bovedas/{id} {
       allow read: if estaAutenticado() && (esAdmin() || resource.data.sede == miSede());
       allow write: if false;

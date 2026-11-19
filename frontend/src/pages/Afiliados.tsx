@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useEstadoCarga, AvisoCarga } from "../hooks/useEstadoCarga";
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { Plus, Search, Trash2, UserPlus, Pencil, ClipboardList, Smartphone } from "lucide-react";
+import Modal from "../components/Modal";
 import PanelAccesoApp from "../components/PanelAccesoApp";
 import { db, crearAfiliado, buscarPersonaCubierta } from "../api/client";
 import DataTable from "../components/DataTable";
@@ -22,6 +23,27 @@ import { PARENTESCOS } from "../utils/parentescos";
 import { limiteBeneficiariosDelPlan, VALOR_BENEFICIARIO_ADICIONAL } from "../utils/cupoBeneficiarios";
 import { normalizarCedula } from "../utils/cedula";
 import CamposSeguroVida, { leerSeguroDeForm } from "../components/CamposSeguroVida";
+
+const ESTADOS_AFILIADO: { valor: Afiliado["estadoPlan"]; titulo: string; punto: string; texto: string; chip: string }[] = [
+  { valor: "activo", titulo: "Activos (al día)", punto: "bg-green-600", texto: "text-green-700", chip: "bg-green-50 text-green-700" },
+  { valor: "en mora", titulo: "En mora", punto: "bg-amber-500", texto: "text-amber-700", chip: "bg-amber-50 text-amber-800" },
+  { valor: "inactivo", titulo: "Inactivos", punto: "bg-tinta/30", texto: "text-tinta/70", chip: "bg-tinta/5 text-tinta/70" },
+];
+
+/** Botón de ícono para las acciones de cada fila (con nombre al pasar el mouse). */
+function BotonAccion({ etiqueta, onClick, peligro, children }: { etiqueta: string; onClick: () => void; peligro?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={etiqueta}
+      aria-label={etiqueta}
+      className={`rounded-lg p-1.5 transition ${peligro ? "text-red-600 hover:bg-red-50" : "text-vino-700 hover:bg-vino-50"}`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function Afiliados() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
@@ -65,6 +87,7 @@ export default function Afiliados() {
   }, []);
 
   useEffect(() => {
+    if (cargandoRol) return; // sin el rol todavía, un empleado consultaría una sede que no es la suya
     const base = collection(db, "afiliados");
     const q = sedeSeleccionada === "all"
       ? query(base, orderBy("nombreCompleto"))
@@ -75,7 +98,7 @@ export default function Afiliados() {
       carga.listo();
     }, (err) => carga.fallo(err));
     return unsub;
-  }, [sedeSeleccionada, carga.intento]);
+  }, [sedeSeleccionada, cargandoRol, carga.intento]);
 
   if (cargandoRol) return <div className="py-16 text-center text-tinta/70">Cargando…</div>;
   const conteo = {
@@ -88,12 +111,6 @@ export default function Afiliados() {
   const adicionalesNuevos = beneficiariosNuevo.filter((b, i) => i >= limiteNuevo && b.adicional && b.nombre.trim()).length;
   const afiliadosFiltrados = filtroEstado === "todos" ? afiliados : afiliados.filter((a) => a.estadoPlan === filtroEstado);
 
-  const PESTAÑAS_ESTADO: { valor: "todos" | Afiliado["estadoPlan"]; etiqueta: string }[] = [
-    { valor: "todos", etiqueta: "Todos" },
-    { valor: "activo", etiqueta: "Activos" },
-    { valor: "en mora", etiqueta: "En mora" },
-    { valor: "inactivo", etiqueta: "Inactivos" },
-  ];
   async function manejarBusqueda(e: FormEvent) {
     e.preventDefault();
     if (!termino.trim()) {
@@ -170,7 +187,22 @@ export default function Afiliados() {
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-2xl">
+          <h2 className="font-display text-2xl text-vino-900">Afiliados</h2>
+          <p className="mt-1 text-sm text-tinta/70">
+            Titulares con plan exequial. Busca a cualquier persona (titular o beneficiario) para saber si tiene plan con nosotros.
+          </p>
+        </div>
+        <button
+          onClick={() => setMostrarFormulario(true)}
+          className="flex min-h-[44px] items-center gap-2 rounded-lg bg-vino-700 px-4 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px"
+        >
+          <UserPlus size={16} aria-hidden="true" /> Nuevo afiliado
+        </button>
+      </header>
+
       {/* Búsqueda rápida: "¿esta persona tiene plan?" — por titular o beneficiario */}
       <form onSubmit={manejarBusqueda} className="flex gap-2">
         <div className="relative flex-1">
@@ -229,39 +261,47 @@ export default function Afiliados() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-vino-900">Todos los afiliados</h2>
-        <button
-          onClick={() => setMostrarFormulario((v) => !v)}
-          className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
-        >
-          <UserPlus size={16} />
-          Nuevo afiliado
-        </button>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {(["activo", "en mora", "inactivo"] as const).map((estado) => (
-          <div key={estado} className="rounded-xl border border-vino-100 bg-white p-4 text-center">
-            <p className="text-xs capitalize text-tinta/70">{estado}</p>
-            <p className="font-display text-xl text-vino-900">{conteo[estado]}</p>
+      {/* Resumen: cada cifra es también un filtro de la tabla */}
+      <section aria-label="Resumen por estado" className="space-y-4 rounded-2xl border border-vino-100 bg-white p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="font-display text-base text-vino-900">Todos los afiliados</h3>
+          <p className="text-sm text-tinta/70">
+            <span className="font-display text-2xl text-vino-900 tabular-nums">{afiliados.length}</span> en total
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {ESTADOS_AFILIADO.map((e) => {
+            const activo = filtroEstado === e.valor;
+            return (
+              <button
+                key={e.valor}
+                onClick={() => setFiltroEstado(activo ? "todos" : e.valor)}
+                aria-pressed={activo}
+                className={`rounded-xl border p-4 text-left transition hover:shadow-md ${activo ? "border-vino-600 ring-2 ring-vino-100" : "border-vino-100"}`}
+              >
+                <p className="flex items-center gap-2 text-sm text-tinta/70">
+                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${e.punto}`} /> {e.titulo}
+                </p>
+                <p className={`mt-1 font-display text-3xl tabular-nums ${e.texto}`}>{conteo[e.valor]}</p>
+              </button>
+            );
+          })}
+        </div>
+        {afiliados.length > 0 && (
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-vino-50" role="img" aria-label={`${conteo.activo} activos, ${conteo["en mora"]} en mora, ${conteo.inactivo} inactivos`}>
+            {ESTADOS_AFILIADO.map((e) => (
+              <div key={e.valor} className={e.punto} style={{ width: `${(conteo[e.valor] / afiliados.length) * 100}%` }} />
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {PESTAÑAS_ESTADO.map((p) => (
-          <button
-            key={p.valor}
-            onClick={() => setFiltroEstado(p.valor)}
-            className={`rounded-full px-3.5 py-1.5 text-sm ${filtroEstado === p.valor ? "bg-vino-700 text-white" : "border border-vino-100 bg-white text-tinta/70"}`}
-          >
-            {p.etiqueta}
-          </button>
-        ))}
-      </div>
+        )}
+        <p className="text-xs text-tinta/70">
+          {filtroEstado === "todos" ? "Toca una cifra para ver solo ese grupo." : `Mostrando solo "${ESTADOS_AFILIADO.find((x) => x.valor === filtroEstado)?.titulo.toLowerCase()}". Toca la cifra otra vez para ver todos.`}
+        </p>
+      </section>
 
       {mostrarFormulario && (
-        <form onSubmit={manejarCrear} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
+        <Modal titulo="Nuevo afiliado" onCerrar={() => { setMostrarFormulario(false); setError(null); }} ancho="max-w-3xl">
+        <form onSubmit={manejarCrear} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <input name="nombreCompleto" required placeholder="Nombre completo" aria-label="Nombre completo" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
             <input name="cedula" placeholder="Cédula (opcional)" aria-label="Cédula (opcional)" className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
@@ -364,67 +404,78 @@ export default function Afiliados() {
             {guardando ? "Guardando…" : "Guardar afiliado"}
           </button>
         </form>
+        </Modal>
       )}
 
       <AvisoCarga carga={carga} />
       <DataTable
         columnas={[
-          { encabezado: "Nombre", render: (a: Afiliado) => a.nombreCompleto, orden: (a: Afiliado) => a.nombreCompleto },
-          { encabezado: "Cédula", render: (a: Afiliado) => a.cedula },
-          { encabezado: "N° Contrato", render: (a: Afiliado) => a.numeroContrato },
-          { encabezado: "Plan", render: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId, orden: (a: Afiliado) => mapaPlanes[a.planId] ?? a.planId },
-          { encabezado: "Fecha afiliación", render: (a: Afiliado) => formatoFecha(a.fechaAfiliacionReal), orden: (a: Afiliado) => aMilisegundos(a.fechaAfiliacionReal) },
-          { encabezado: "Cuota", render: (a: Afiliado) => formatoPesos(a.valorCuotaMensual), orden: (a: Afiliado) => a.valorCuotaMensual },
-          { encabezado: "Ubicación", render: (a: Afiliado) => ubicacionDe(a), orden: (a: Afiliado) => ubicacionDe(a) },
           {
-            encabezado: "Estado",
+            encabezado: "Afiliado",
+            orden: (a: Afiliado) => a.nombreCompleto,
             render: (a: Afiliado) => (
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs ${a.estadoPlan === "activo"
-                  ? "bg-green-50 text-green-700"
-                  : a.estadoPlan === "en mora"
-                    ? "bg-amber-50 text-amber-700"
-                    : "bg-tinta/5 text-tinta/70"
-                  }`}
-              >
-                {a.estadoPlan}
-              </span>
+              <div className="min-w-[12rem] max-w-[18rem]">
+                <p className="font-semibold text-tinta">{a.nombreCompleto}</p>
+                <p className="text-xs text-tinta/60">
+                  {[a.cedula ? `C.C. ${a.cedula}` : "Sin cédula", a.numeroContrato ? `Contrato ${a.numeroContrato}` : "Sin contrato"].join(" · ")}
+                </p>
+              </div>
             ),
           },
           {
-            encabezado: "Beneficiarios",
+            encabezado: "Plan y cuota",
+            orden: (a: Afiliado) => a.valorCuotaMensual,
             render: (a: Afiliado) => (
-              <button onClick={() => setAfiliadoBeneficiarios(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
-                <Users size={14} /> {a.beneficiarios?.length ?? 0}
+              <div>
+                <p className="text-tinta">{mapaPlanes[a.planId] ?? a.planId}</p>
+                <p className="text-xs font-medium tabular-nums text-vino-700">{formatoPesos(a.valorCuotaMensual)} / mes</p>
+              </div>
+            ),
+          },
+          {
+            encabezado: "Desde",
+            orden: (a: Afiliado) => aMilisegundos(a.fechaAfiliacionReal),
+            render: (a: Afiliado) => (
+              <div>
+                <p className="tabular-nums text-tinta">{aMilisegundos(a.fechaAfiliacionReal) ? formatoFecha(a.fechaAfiliacionReal) : "—"}</p>
+                <p className="text-xs text-tinta/60">{ubicacionDe(a) || a.sede}</p>
+              </div>
+            ),
+          },
+          {
+            encabezado: "Estado",
+            orden: (a: Afiliado) => a.estadoPlan,
+            render: (a: Afiliado) => {
+              const e = ESTADOS_AFILIADO.find((x) => x.valor === a.estadoPlan);
+              return (
+                <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium capitalize ${e?.chip ?? ""}`}>
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${e?.punto ?? ""}`} />
+                  {a.estadoPlan}
+                </span>
+              );
+            },
+          },
+          {
+            encabezado: "Beneficiarios",
+            orden: (a: Afiliado) => a.beneficiarios?.length ?? 0,
+            render: (a: Afiliado) => (
+              <button onClick={() => setAfiliadoBeneficiarios(a)} className="inline-flex items-center gap-1.5 rounded-full bg-vino-50 px-2.5 py-1 text-xs font-medium text-vino-700 hover:bg-vino-100" title="Ver beneficiarios">
+                <Users size={13} aria-hidden="true" /> {a.beneficiarios?.length ?? 0}
               </button>
             ),
           },
           {
             encabezado: "Acciones",
             render: (a: Afiliado) => (
-              <div className="flex gap-2">
-                <button aria-label="Editar" onClick={() => setAfiliadoEditando(a)} className="text-vino-700 hover:underline"><Pencil size={14} aria-hidden="true" /></button>
-                <button aria-label="Acceso a la app" title="Acceso a la app" onClick={() => setAfiliadoAccesoApp(a)} className="text-vino-700 hover:underline"><Smartphone size={14} aria-hidden="true" /></button>
+              <div className="flex items-center gap-0.5">
+                <BotonAccion etiqueta="Editar" onClick={() => setAfiliadoEditando(a)}><Pencil size={16} aria-hidden="true" /></BotonAccion>
+                <BotonAccion etiqueta="Pagos" onClick={() => setAfiliadoPagos(a)}><Receipt size={16} aria-hidden="true" /></BotonAccion>
+                <BotonAccion etiqueta="Servicios" onClick={() => setAfiliadoServicios(a)}><ClipboardList size={16} aria-hidden="true" /></BotonAccion>
+                <BotonAccion etiqueta="Acceso a la app" onClick={() => setAfiliadoAccesoApp(a)}><Smartphone size={16} aria-hidden="true" /></BotonAccion>
                 {rol === "admin" && (
-                  <button aria-label="Eliminar" onClick={() => manejarEliminarAfiliado(a)} className="text-red-600 hover:underline"><Trash2 size={14} aria-hidden="true" /></button>
+                  <BotonAccion etiqueta="Eliminar" peligro onClick={() => manejarEliminarAfiliado(a)}><Trash2 size={16} aria-hidden="true" /></BotonAccion>
                 )}
               </div>
-            ),
-          },
-          {
-            encabezado: "Pagos",
-            render: (a: Afiliado) => (
-              <button onClick={() => setAfiliadoPagos(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
-                <Receipt size={14} /> Ver
-              </button>
-            ),
-          },
-          {
-            encabezado: "Servicios",
-            render: (a: Afiliado) => (
-              <button onClick={() => setAfiliadoServicios(a)} className="flex items-center gap-1 text-vino-700 hover:underline">
-                <ClipboardList size={14} /> Ver
-              </button>
             ),
           },
         ]}

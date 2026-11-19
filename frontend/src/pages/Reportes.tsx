@@ -1,17 +1,39 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Check, ClipboardList, Clock, Landmark, Wallet } from "lucide-react";
 import { db, generarReporteMensual, generarReporte } from "../api/client";
 import { useRol } from "../auth/RolContext";
 import { formatoPesos, formatoFecha } from "../utils/formato";
+import { COLORES_MARCA } from "../components/BarraSegmentada";
 import type { Convenio, FilaReporte, FilaReporteMensual, FiltroReporteMensual, TipoFiltroReporte } from "../types";
 
 function primerDiaDelMes(): string {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
+
 function hoy(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Color de cada estado de facturación (mismo criterio en todo el reporte). */
+function claseEstado(estado: string): string {
+  if (estado === "pagado") return "bg-green-50 text-green-700";
+  if (estado === "facturado") return "bg-vino-50 text-vino-700";
+  return "bg-amber-50 text-amber-800"; // pendiente por facturar
+}
+
+const claseCampo = "w-full rounded-lg border border-vino-100 bg-white px-3 py-2 text-sm";
+
+function Cifra({ titulo, valor, icono: Icono, clase = "text-vino-900" }: { titulo: string; valor: string; icono: typeof Wallet; clase?: string }) {
+  return (
+    <div className="rounded-2xl border border-vino-100 bg-white p-5">
+      <p className="flex items-center gap-2 text-sm text-tinta/70">
+        <Icono size={16} aria-hidden="true" /> {titulo}
+      </p>
+      <p className={`mt-1 font-display text-2xl tabular-nums sm:text-3xl ${clase}`}>{valor}</p>
+    </div>
+  );
 }
 
 export default function Reportes() {
@@ -19,14 +41,29 @@ export default function Reportes() {
   const [pestaña, setPestaña] = useState<"mensual" | "porConvenio">("mensual");
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2">
-        <button onClick={() => setPestaña("mensual")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "mensual" ? "bg-vino-700 text-white" : "bg-white text-tinta/70 border border-vino-100"}`}>
-          Reporte mensual por sede
-        </button>
-        <button onClick={() => setPestaña("porConvenio")} className={`rounded-full px-3.5 py-1.5 text-sm ${pestaña === "porConvenio" ? "bg-vino-700 text-white" : "bg-white text-tinta/70 border border-vino-100"}`}>
-          Facturación por Alcaldía / Convenio
-        </button>
+    <div className="space-y-8">
+      <header className="max-w-2xl">
+        <h2 className="font-display text-2xl text-vino-900">Reportes</h2>
+        <p className="mt-1 text-sm text-tinta/70">
+          Lo que se facturó en cada sede y lo que está pendiente por cobrar a alcaldías y convenios.
+        </p>
+      </header>
+
+      <div className="inline-flex flex-wrap gap-1 rounded-xl bg-vino-50 p-1" role="tablist" aria-label="Tipo de reporte">
+        {([
+          { valor: "mensual", etiqueta: "Reporte mensual por sede" },
+          { valor: "porConvenio", etiqueta: "Facturación por alcaldía / convenio" },
+        ] as const).map((p) => (
+          <button
+            key={p.valor}
+            role="tab"
+            aria-selected={pestaña === p.valor}
+            onClick={() => setPestaña(p.valor)}
+            className={`min-h-[40px] rounded-lg px-4 text-sm font-medium transition ${pestaña === p.valor ? "bg-vino-700 text-white shadow-sm" : "text-vino-700 hover:bg-white"}`}
+          >
+            {p.etiqueta}
+          </button>
+        ))}
       </div>
 
       {!cargandoRol && (pestaña === "mensual" ? <ReporteMensual sedeSeleccionada={sedeSeleccionada} /> : <ReportePorConvenio />)}
@@ -60,7 +97,8 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
     }
   }
 
-  useEffect(() => { generar(); }, [sedeEfectiva]); 
+  useEffect(() => { generar(); }, [sedeEfectiva]);
+
   const agrupadoPorSede = useMemo(() => {
     if (!filas) return {};
     return filas.reduce<Record<string, FilaReporteMensual[]>>((acc, f) => {
@@ -70,13 +108,15 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
   }, [filas]);
 
   const total = filas?.reduce((s, f) => s + f.valorTotal, 0) ?? 0;
+  const pendientes = filas?.filter((f) => f.estadoFacturacion !== "pagado") ?? [];
+  const valorPendiente = pendientes.reduce((s, f) => s + f.valorTotal, 0);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-vino-100 bg-white p-4">
+    <div className="space-y-6">
+      <div className="grid gap-3 rounded-2xl border border-vino-100 bg-white p-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto] lg:items-end">
         <div>
-          <label className="mb-1 block text-xs text-tinta/70">Filtro</label>
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value as FiltroReporteMensual)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
+          <label htmlFor="rep-filtro" className="mb-1 block text-xs font-medium text-tinta/70">Qué servicios</label>
+          <select id="rep-filtro" value={filtro} onChange={(e) => setFiltro(e.target.value as FiltroReporteMensual)} className={claseCampo}>
             <option value="todos">Todos los servicios</option>
             <option value="convenioPendienteFacturar">Convenio pendiente de facturar</option>
             <option value="facturado">Facturado (pendiente de pago)</option>
@@ -84,75 +124,115 @@ function ReporteMensual({ sedeSeleccionada }: { sedeSeleccionada: string }) {
           </select>
         </div>
         <div>
-  <label className="mb-1 block text-xs text-tinta/70">Sede</label>
-  <select value={sedeReporte} onChange={(e) => setSedeReporte(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
-    <option value="header">Usar selector de arriba ({sedeSeleccionada === "all" ? "Todas" : sedeSeleccionada})</option>
-    <option value="all">Todas las sedes</option>
-    {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
-  </select>
-</div>
-        <div>
-          <label className="mb-1 block text-xs text-tinta/70">Desde</label>
-          <input type="date" min="1900-01-01" max="2100-12-31" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label htmlFor="rep-sede" className="mb-1 block text-xs font-medium text-tinta/70">Sede</label>
+          <select id="rep-sede" value={sedeReporte} onChange={(e) => setSedeReporte(e.target.value)} className={claseCampo}>
+            <option value="header">La de arriba ({sedeSeleccionada === "all" ? "todas" : sedeSeleccionada})</option>
+            <option value="all">Todas las sedes</option>
+            {SEDES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-tinta/70">Hasta</label>
-          <input type="date" min="1900-01-01" max="2100-12-31" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+          <label htmlFor="rep-desde" className="mb-1 block text-xs font-medium text-tinta/70">Desde</label>
+          <input id="rep-desde" type="date" min="1900-01-01" max="2100-12-31" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className={claseCampo} />
         </div>
-        <button onClick={generar} disabled={generando} className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
-          <BarChart3 size={16} />
+        <div>
+          <label htmlFor="rep-hasta" className="mb-1 block text-xs font-medium text-tinta/70">Hasta</label>
+          <input id="rep-hasta" type="date" min="1900-01-01" max="2100-12-31" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className={claseCampo} />
+        </div>
+        <button onClick={generar} disabled={generando} className="flex min-h-[42px] items-center justify-center gap-2 rounded-lg bg-vino-700 px-5 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px disabled:opacity-60">
+          <BarChart3 size={16} aria-hidden="true" />
           {generando ? "Generando…" : "Generar"}
         </button>
-        <p className="text-xs text-tinta/70">
-  Mostrando: {sedeEfectiva === "all" ? "todas las sedes" : sedeEfectiva}
-</p>
       </div>
 
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {filas && (
+        <section aria-label="Resumen del reporte" className="grid gap-3 sm:grid-cols-3">
+          <Cifra titulo="Total del período" valor={formatoPesos(total)} icono={Wallet} />
+          <Cifra titulo="Servicios" valor={String(filas.length)} icono={ClipboardList} />
+          <Cifra titulo={`Sin pagar (${pendientes.length})`} valor={formatoPesos(valorPendiente)} icono={Clock} clase={valorPendiente > 0 ? "text-amber-700" : "text-green-700"} />
+        </section>
+      )}
 
       {filas && filas.length === 0 && (
-        <div className="rounded-xl border border-dashed border-vino-100 bg-white py-10 text-center text-sm text-tinta/70">
-          No hay servicios que coincidan con este filtro y rango de fechas.
+        <div className="rounded-2xl border border-dashed border-vino-400 bg-white py-12 text-center">
+          <p className="font-display text-lg text-vino-900">No hay servicios en este período</p>
+          <p className="text-sm text-tinta/70">Prueba con otro filtro o un rango de fechas más amplio.</p>
         </div>
       )}
 
       {filas && filas.length > 0 && (
         <div className="space-y-6">
-          {Object.entries(agrupadoPorSede).map(([sede, filasSede]) => (
-            <div key={sede} className="overflow-hidden rounded-xl border border-vino-100 bg-white">
-              <div className="flex items-center justify-between bg-vino-50 px-4 py-2.5">
-                <p className="font-display text-base text-vino-900">{sede}</p>
-                <p className="text-sm text-vino-700">{formatoPesos(filasSede.reduce((s, f) => s + f.valorTotal, 0))}</p>
-              </div>
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs text-tinta/70">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">Fecha</th>
-                    <th className="px-4 py-2 font-medium">Convenio</th>
-                    <th className="px-4 py-2 font-medium">Fallecido</th>
-                    <th className="px-4 py-2 font-medium">Servicio prestado</th>
-                    <th className="px-4 py-2 font-medium">Bóveda</th>
-                    <th className="px-4 py-2 font-medium">Estado</th>
-                    <th className="px-4 py-2 text-right font-medium">Valor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-vino-50">
-                  {filasSede.map((f) => (
-                    <tr key={f.id}>
-                      <td className="px-4 py-2">{formatoFecha(f.fecha)}</td>
-                      <td className="px-4 py-2">{f.convenio}</td>
-                      <td className="px-4 py-2">{f.fallecido}</td>
-                      <td className="px-4 py-2">{f.servicioPrestado}</td>
-                      <td className="px-4 py-2">{f.boveda ? "Sí" : "No"}</td>
-                      <td className="px-4 py-2 text-xs">{f.estadoFacturacion}</td>
-                      <td className="px-4 py-2 text-right">{formatoPesos(f.valorTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {Object.entries(agrupadoPorSede).map(([sede, filasSede], indice) => {
+            const totalSede = filasSede.reduce((s, f) => s + f.valorTotal, 0);
+            const proporcion = total > 0 ? totalSede / total : 0;
+            return (
+              <section key={sede} aria-label={`Sede ${sede}`} className="overflow-hidden rounded-2xl border border-vino-100 bg-white">
+                <div className="space-y-3 border-b border-vino-50 px-5 py-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="font-display text-lg text-vino-900">{sede}</h3>
+                    <p className="text-sm text-tinta/70">
+                      {filasSede.length} {filasSede.length === 1 ? "servicio" : "servicios"} ·{" "}
+                      <span className="font-display text-xl tabular-nums text-vino-900">{formatoPesos(totalSede)}</span>
+                    </p>
+                  </div>
+                  {Object.keys(agrupadoPorSede).length > 1 && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-vino-50">
+                        <div className="h-full rounded-full" style={{ width: `${proporcion * 100}%`, backgroundColor: COLORES_MARCA[indice % COLORES_MARCA.length] }} />
+                      </div>
+                      <span className="w-12 text-right text-xs tabular-nums text-tinta/70">{(proporcion * 100).toFixed(0)} %</span>
+                    </div>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="bg-crema text-xs uppercase tracking-wide text-tinta/60">
+                      <tr>
+                        <th scope="col" className="px-5 py-2.5 font-medium">Fecha</th>
+                        <th scope="col" className="px-5 py-2.5 font-medium">Fallecido</th>
+                        <th scope="col" className="px-5 py-2.5 font-medium">Convenio</th>
+                        <th scope="col" className="px-5 py-2.5 font-medium">Servicio</th>
+                        <th scope="col" className="px-5 py-2.5 text-center font-medium">Bóveda</th>
+                        <th scope="col" className="px-5 py-2.5 font-medium">Estado</th>
+                        <th scope="col" className="px-5 py-2.5 text-right font-medium">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-vino-50">
+                      {filasSede.map((f) => (
+                        <tr key={f.id} className="hover:bg-vino-50/40">
+                          <td className="whitespace-nowrap px-5 py-3 tabular-nums text-tinta/80">{formatoFecha(f.fecha)}</td>
+                          <td className="px-5 py-3 font-medium text-tinta">{f.fallecido}</td>
+                          <td className="px-5 py-3 text-tinta/80">{f.convenio}</td>
+                          <td className="px-5 py-3 text-tinta/80">{f.servicioPrestado}</td>
+                          <td className="px-5 py-3 text-center">
+                            {f.boveda ? <Check size={16} className="mx-auto text-green-700" aria-label="Con bóveda" /> : <span className="text-tinta/30" aria-label="Sin bóveda">—</span>}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${claseEstado(f.estadoFacturacion)}`}>{f.estadoFacturacion}</span>
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums text-tinta">{formatoPesos(f.valorTotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-crema">
+                        <td colSpan={6} className="px-5 py-3 text-right text-sm font-medium text-tinta/70">Total {sede}</td>
+                        <td className="whitespace-nowrap px-5 py-3 text-right font-display text-lg tabular-nums text-vino-900">{formatoPesos(totalSede)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </section>
+            );
+          })}
+          {Object.keys(agrupadoPorSede).length > 1 && (
+            <div className="flex items-center justify-between rounded-2xl bg-vino-700 px-5 py-4 text-white">
+              <span className="text-sm font-medium">Total general</span>
+              <span className="font-display text-2xl tabular-nums">{formatoPesos(total)}</span>
             </div>
-          ))}
-          <p className="text-right font-display text-lg text-vino-900">Total general: {formatoPesos(total)}</p>
+          )}
         </div>
       )}
     </div>
@@ -194,52 +274,101 @@ function ReportePorConvenio() {
   }
 
   const total = filas?.reduce((s, f) => s + f.valor, 0) ?? 0;
+  const conBoveda = filas?.filter((f) => f.usoBoveda).length ?? 0;
 
   return (
     <div className="space-y-6">
-      <h2 className="font-display text-lg text-vino-900">Servicios pendientes por facturar</h2>
-      <form onSubmit={manejarGenerar} className="space-y-3 rounded-xl border border-vino-100 bg-white p-4">
-        <div className="flex gap-2">
+      <form onSubmit={manejarGenerar} className="space-y-4 rounded-2xl border border-vino-100 bg-white p-5">
+        <div>
+          <h3 className="font-display text-lg text-vino-900">Servicios pendientes por facturar</h3>
+          <p className="text-sm text-tinta/70">Elige la alcaldía o el convenio y el período para armar la cuenta de cobro.</p>
+        </div>
+        <div className="inline-flex gap-1 rounded-xl bg-vino-50 p-1">
           {(["alcaldia", "convenio"] as TipoFiltroReporte[]).map((t) => (
-            <button key={t} type="button" onClick={() => setFiltroTipo(t)} className={`rounded-full px-3.5 py-1.5 text-sm capitalize ${filtroTipo === t ? "bg-vino-700 text-white" : "bg-vino-50 text-vino-700"}`}>
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFiltroTipo(t)}
+              aria-pressed={filtroTipo === t}
+              className={`min-h-[38px] rounded-lg px-4 text-sm font-medium transition ${filtroTipo === t ? "bg-vino-700 text-white shadow-sm" : "text-vino-700 hover:bg-white"}`}
+            >
               {t === "alcaldia" ? "Alcaldía" : "Convenio"}
             </button>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <select name="filtroValor" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm">
-            <option value="">{filtroTipo === "alcaldia" ? "Alcaldía…" : "Convenio…"}</option>
-            {opciones.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-          <input name="fechaInicio" type="date" min="1900-01-01" max="2100-12-31" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
-          <input name="fechaFin" type="date" min="1900-01-01" max="2100-12-31" required className="rounded-lg border border-vino-100 px-3 py-2 text-sm" />
+        <div className="grid gap-3 sm:grid-cols-[1.5fr_1fr_1fr_auto] sm:items-end">
+          <div>
+            <label htmlFor="conv-valor" className="mb-1 block text-xs font-medium text-tinta/70">{filtroTipo === "alcaldia" ? "Alcaldía" : "Convenio"}</label>
+            <select id="conv-valor" name="filtroValor" required className={claseCampo}>
+              <option value="">Elige…</option>
+              {opciones.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="conv-desde" className="mb-1 block text-xs font-medium text-tinta/70">Desde</label>
+            <input id="conv-desde" name="fechaInicio" type="date" min="1900-01-01" max="2100-12-31" required className={claseCampo} />
+          </div>
+          <div>
+            <label htmlFor="conv-hasta" className="mb-1 block text-xs font-medium text-tinta/70">Hasta</label>
+            <input id="conv-hasta" name="fechaFin" type="date" min="1900-01-01" max="2100-12-31" required className={claseCampo} />
+          </div>
+          <button type="submit" disabled={generando} className="flex min-h-[42px] items-center justify-center gap-2 rounded-lg bg-vino-700 px-5 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px disabled:opacity-60">
+            <BarChart3 size={16} aria-hidden="true" />
+            {generando ? "Generando…" : "Generar reporte"}
+          </button>
         </div>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <button type="submit" disabled={generando} className="flex items-center gap-2 rounded-lg bg-buganvilla px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
-          <BarChart3 size={16} />
-          {generando ? "Generando…" : "Generar reporte"}
-        </button>
+        {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </form>
 
-      {filas && (
-        <div className="rounded-xl border border-vino-100 bg-white p-4">
-          {filas.length === 0 ? (
-            <p className="text-sm text-tinta/70">No hay servicios pendientes por facturar en ese rango.</p>
-          ) : (
-            <>
-              <ul className="divide-y divide-vino-50">
-                {filas.map((f, i) => (
-                  <li key={i} className="py-2.5 text-sm">
-                    <span className="font-medium text-vino-900">{formatoFecha(f.fecha)}</span> — {f.fallecido}: {f.descripcion}
-                    {f.usoBoveda && <span className="ml-1 text-xs text-vino-700">(con bóveda)</span>}
-                    {" — "}<span className="font-medium">{formatoPesos(f.valor)}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-right font-display text-lg text-vino-900">Total: {formatoPesos(total)}</p>
-            </>
-          )}
+      {filas && filas.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-vino-400 bg-white py-12 text-center">
+          <p className="font-display text-lg text-vino-900">Nada pendiente por facturar</p>
+          <p className="text-sm text-tinta/70">No hay servicios pendientes en ese rango de fechas.</p>
         </div>
+      )}
+
+      {filas && filas.length > 0 && (
+        <>
+          <section aria-label="Resumen" className="grid gap-3 sm:grid-cols-3">
+            <Cifra titulo="Por facturar" valor={formatoPesos(total)} icono={Wallet} clase="text-amber-700" />
+            <Cifra titulo="Servicios" valor={String(filas.length)} icono={ClipboardList} />
+            <Cifra titulo="Con bóveda" valor={String(conBoveda)} icono={Landmark} />
+          </section>
+          <div className="overflow-hidden rounded-2xl border border-vino-100 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-sm">
+                <thead className="bg-crema text-xs uppercase tracking-wide text-tinta/60">
+                  <tr>
+                    <th scope="col" className="px-5 py-2.5 font-medium">Fecha</th>
+                    <th scope="col" className="px-5 py-2.5 font-medium">Fallecido</th>
+                    <th scope="col" className="px-5 py-2.5 font-medium">Descripción</th>
+                    <th scope="col" className="px-5 py-2.5 text-center font-medium">Bóveda</th>
+                    <th scope="col" className="px-5 py-2.5 text-right font-medium">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-vino-50">
+                  {filas.map((f, i) => (
+                    <tr key={i} className="hover:bg-vino-50/40">
+                      <td className="whitespace-nowrap px-5 py-3 tabular-nums text-tinta/80">{formatoFecha(f.fecha)}</td>
+                      <td className="px-5 py-3 font-medium text-tinta">{f.fallecido}</td>
+                      <td className="px-5 py-3 text-tinta/80">{f.descripcion}</td>
+                      <td className="px-5 py-3 text-center">
+                        {f.usoBoveda ? <Check size={16} className="mx-auto text-green-700" aria-label="Con bóveda" /> : <span className="text-tinta/30" aria-label="Sin bóveda">—</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums text-tinta">{formatoPesos(f.valor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-vino-700 text-white">
+                    <td colSpan={4} className="px-5 py-3 text-right text-sm font-medium">Total por facturar</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-right font-display text-lg tabular-nums">{formatoPesos(total)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

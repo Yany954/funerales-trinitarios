@@ -48,6 +48,8 @@ beforeEach(async () => {
     await setDoc(doc(db, "cuentas_afiliado/af2"), { afiliadoId: "af2", sede: "Pelaya", uid: "u2" });
     await setDoc(doc(db, "codigos_activacion/af1"), { hash: "x" });
     await setDoc(doc(db, "pagos/p1"), { afiliadoId: "af1", sede: "Pailitas" });
+    await setDoc(doc(db, "pagos_seguro_vida/s1"), { afiliadoId: "af1", sede: "Pailitas" });
+    await setDoc(doc(db, "pagos_seguro_vida/s2"), { afiliadoId: "af2", sede: "Pelaya" });
     await setDoc(doc(db, "planes_funerarios/plan1"), { nombre: "Básico" });
     await setDoc(doc(db, "vista_afiliado/af1"), { afiliadoId: "af1", nombreCompleto: "Titular Uno" });
     await setDoc(doc(db, "vista_afiliado/af2"), { afiliadoId: "af2", nombreCompleto: "Titular Dos" });
@@ -109,6 +111,17 @@ describe("cuentas sin rol y staff (no debe cambiar)", () => {
     const db = env.authenticatedContext("emp", { rol: "empleado", sede: "Pailitas" }).firestore();
     await assertSucceeds(getDoc(doc(db, "cuentas_afiliado/af1")));
     await assertFails(getDoc(doc(db, "cuentas_afiliado/af2")));
+  });
+
+  it("pagos del seguro: admin todos, empleado solo su sede, titular ninguno", async () => {
+    const admin = env.authenticatedContext("admin", { rol: "admin", sede: "all" }).firestore();
+    await assertSucceeds(getDoc(doc(admin, "pagos_seguro_vida/s2")));
+    const emp = env.authenticatedContext("emp", { rol: "empleado", sede: "Pailitas" }).firestore();
+    await assertSucceeds(getDoc(doc(emp, "pagos_seguro_vida/s1")));
+    await assertFails(getDoc(doc(emp, "pagos_seguro_vida/s2")));
+    await assertFails(setDoc(doc(admin, "pagos_seguro_vida/s1"), { valor: 1 }, { merge: true }));
+    const titular_ = env.authenticatedContext("u1", titular).firestore();
+    await assertFails(getDoc(doc(titular_, "pagos_seguro_vida/s1")));
   });
 
   it("nadie del staff lee códigos de activación", async () => {
