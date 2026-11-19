@@ -15,6 +15,12 @@ import type { Servicio, ItemServicio, TipoServicio, TipoTraslado, Convenio, Tipo
 
 const SEDES = ["Pailitas", "Tamalameque", "Pelaya", "Curumaní"] as const;
 
+/** ¿El enlace de Storage es una foto? (para mostrar vista previa en vez del ícono de PDF) */
+function esImagen(url: string): boolean {
+  const ruta = decodeURIComponent(url.split("?")[0]);
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(ruta);
+}
+
 /** Colores por estado de facturación (mismos en Servicios y Facturación). */
 const ESTILO_FACTURACION: Record<string, { chip: string; punto: string }> = {
   "pendiente por facturar": { chip: "bg-amber-50 text-amber-800", punto: "bg-amber-500" },
@@ -45,6 +51,7 @@ export default function Servicios() {
   const servicioEnfocado = searchParams.get("servicio");
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [documentosDe, setDocumentosDe] = useState<Servicio | null>(null);
   const [filtroResumen, setFiltroResumen] = useState<"todos" | "mes" | "pendiente por facturar" | "facturado">("todos");
   const [editando, setEditando] = useState<Servicio | null>(null);
   const [items, setItems] = useState<ItemServicio[]>([itemVacio()]);
@@ -481,9 +488,14 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
             encabezado: "Documentos",
             render: (s: Servicio) =>
               s.documentosAdjuntos?.length ? (
-                <a href={s.documentosAdjuntos[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-vino-50 px-2.5 py-1 text-xs font-medium text-vino-700 hover:bg-vino-100" title="Abrir el primer documento">
+                <button
+                  type="button"
+                  onClick={() => setDocumentosDe(s)}
+                  className="inline-flex items-center gap-1 rounded-full bg-vino-50 px-2.5 py-1 text-xs font-medium text-vino-700 hover:bg-vino-100"
+                  title="Ver todos los documentos"
+                >
                   <Paperclip size={12} aria-hidden="true" /> {s.documentosAdjuntos.length}
-                </a>
+                </button>
               ) : (
                 <span className="text-xs text-tinta/40">—</span>
               ),
@@ -509,6 +521,30 @@ const OPCIONES_TARIFA: { campo: keyof TarifaConvenio; etiqueta: string }[] = [
         vacioTitulo="Todavía no hay servicios registrados"
         vacioDescripcion='Usa "Nuevo servicio" para agregar el primero.'
       />
+
+      {documentosDe && (
+        <Modal titulo={`Documentos de ${documentosDe.fallecido.nombreCompleto}`} onCerrar={() => setDocumentosDe(null)} ancho="max-w-2xl">
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {documentosDe.documentosAdjuntos.map((url, i) => (
+              <li key={url}>
+                <a href={url} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-xl border border-vino-100 bg-white transition hover:shadow-md">
+                  {esImagen(url) ? (
+                    <img src={url} alt={`Documento ${i + 1}`} className="aspect-[4/3] w-full bg-crema object-cover" />
+                  ) : (
+                    <div className="flex aspect-[4/3] w-full items-center justify-center bg-crema text-vino-400">
+                      <FileText size={40} aria-hidden="true" />
+                    </div>
+                  )}
+                  <p className="flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-vino-700">
+                    Documento {i + 1}
+                    <span className="text-xs text-tinta/60 group-hover:underline">Abrir en otra pestaña</span>
+                  </p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Modal>
+      )}
     </div>
   );
 }
