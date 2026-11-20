@@ -42,7 +42,7 @@ export default function Inicio() {
           )}
 
           <View style={estilos.botones}>
-            {v.plan && <Boton titulo={t("plan.verContrato")} variante="secundario" onPress={() => router.push("/contrato")} />}
+            {v.plan && <Boton titulo={t("plan.verBeneficios")} variante="secundario" icono="ribbon-outline" onPress={() => router.push("/beneficios")} />}
             {v.servicios.length > 0 && <Boton titulo={t("plan.verServicios")} variante="secundario" onPress={() => router.push("/servicios")} />}
           </View>
         </Pantalla>

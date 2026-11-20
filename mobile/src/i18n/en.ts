@@ -87,7 +87,7 @@ const en: Traducciones = {
     alDia: "You're up to date until {{fecha}}.",
     enMora: "Your payment was due on {{fecha}}. Visit your branch to catch up.",
     inactivo: "Your plan is inactive. Visit your branch for more information.",
-    verContrato: "See my contract",
+    verBeneficios: "See my plan benefits",
     verServicios: "Services used",
   },
   seguro: {
@@ -127,12 +127,13 @@ const en: Traducciones = {
     tipoPago: { afiliado: "Covered by your plan", convenio_alcaldia: "By agreement", pendiente: "Payment pending" },
     tipo: { traslado: "Transfer", "servicio completo": "Full service", "traslado + servicio completo": "Transfer + full service" },
   },
-  contrato: {
-    titulo: "My contract",
-    numero: "Contract no. {{numero}}",
-    noDisponible: "Your contract isn't available in the app yet. Ask your branch to upload it.",
-    foto: "Contract photo {{n}}",
-    ampliar: "Tap the photo to see it larger.",
+  beneficios: {
+    titulo: "Your plan benefits",
+    plan: "{{nombre}} plan",
+    contrato: "Contract no. {{numero}}",
+    intro: "This is what your plan covers and the conditions to use it (in Spanish, as written in your contract).",
+    sinInfo: "Your plan benefits aren't in the app yet. Ask your branch about your plan benefits.",
+    dudas: "Questions about your plan? Visit your branch.",
   },
   perfil: {
     titulo: "My profile",

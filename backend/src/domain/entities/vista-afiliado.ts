@@ -22,7 +22,6 @@ export interface VistaAfiliado {
   fechaNacimiento: string | null;
   celular: string | null;
   fotoPerfilURL: string | null;
-  contratoFotos: string[];
 
   /** Plan exequial (null si es titular de solo seguro de vida). */
   plan: {
@@ -31,6 +30,8 @@ export interface VistaAfiliado {
     cuotaMensual: number;
     cubiertoHasta: string | null; // último día cubierto, "aaaa-mm-dd"
     cupo: { usados: number; limite: number };
+    /** Beneficios y condiciones del plan (editables en el dashboard). [] = preguntar en la sede. */
+    beneficios: string[];
     beneficiarios: BeneficiarioVista[];
     pagos: PagoVista[]; // los 12 más recientes
   } | null;

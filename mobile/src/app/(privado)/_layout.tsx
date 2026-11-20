@@ -19,7 +19,7 @@ export default function LayoutPrivado() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="contrato" options={{ title: t("contrato.titulo") }} />
+        <Stack.Screen name="beneficios" options={{ title: t("beneficios.titulo") }} />
         <Stack.Screen name="servicios" options={{ title: t("servicios.titulo") }} />
       </Stack>
     </VistaProvider>

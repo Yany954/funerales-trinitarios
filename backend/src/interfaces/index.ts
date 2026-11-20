@@ -29,4 +29,5 @@ export {
   vistaPorPagoFn,
   vistaPorPagoSeguroFn,
   vistaPorServicioFn,
+  vistaPorPlanFn,
 } from "./triggers/vista-afiliado";

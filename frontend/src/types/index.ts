@@ -93,8 +93,6 @@ export interface Afiliado {
   celular?: string;
   /** Foto que sube el titular desde la app. */
   fotoPerfilURL?: string;
-  /** Fotos del contrato físico (las ve el titular en la app). */
-  contratoFotos?: string[];
 }
 
 // ============================================================
@@ -185,7 +183,6 @@ export interface ActualizarAfiliadoInput {
   observaciones?: string;
   ubicacion?: string;
   celular?: string; // "" = quitar
-  contratoFotos?: string[];
 }
 
 export interface ActualizarBeneficiariosInput {
@@ -233,6 +230,8 @@ export interface PlanFunerario {
   id: string;
   nombre: string;
   valorMensual: number;
+  /** Editados en el dashboard; vacío = los de la hoja (utils/beneficiosPlan.ts). */
+  beneficios?: string[];
 }
 
 export interface CrearPlanInput {
@@ -243,6 +242,8 @@ export interface CrearPlanInput {
 export interface ActualizarPlanInput {
   id: string;
   nombre?: string;
+  /** Un beneficio por elemento. [] = volver a los de la hoja. */
+  beneficios?: string[];
 }
 
 export interface HistorialPrecioPlan {

@@ -6,6 +6,7 @@ import { contarBeneficiariosQueOcupanCupo, limiteBeneficiariosDelPlan } from "..
 import { estaRetirado } from "../../domain/value-objects/estado-beneficiario";
 import { cubiertoHasta } from "../../domain/value-objects/mora";
 import { enmascararCedula } from "../../domain/value-objects/cedula";
+import { beneficiosDelPlan } from "../../domain/value-objects/beneficios-plan";
 
 export const PAGOS_EN_VISTA = 12;
 
@@ -57,6 +58,8 @@ function servicio(s: Servicio): ServicioVista {
 export function construirVistaAfiliado(datos: {
   afiliado: Afiliado;
   nombrePlan: string | null;
+  /** Los guardados en planes_funerarios (si se editaron en el dashboard). */
+  beneficiosGuardados?: string[];
   pagosPlan: Pago[];
   pagosSeguro: Pago[];
   servicios: Servicio[];
@@ -77,7 +80,6 @@ export function construirVistaAfiliado(datos: {
     fechaNacimiento: iso(a.fechaNacimiento),
     celular: a.celular ?? null,
     fotoPerfilURL: a.fotoPerfilURL ?? null,
-    contratoFotos: a.contratoFotos ?? [],
 
     plan: a.soloSeguro
       ? null
@@ -90,6 +92,7 @@ export function construirVistaAfiliado(datos: {
             usados: contarBeneficiariosQueOcupanCupo(a.beneficiarios ?? [], anio),
             limite: limiteBeneficiariosDelPlan(nombrePlan ?? undefined, a.sede),
           },
+          beneficios: beneficiosDelPlan(nombrePlan, datos.beneficiosGuardados),
           beneficiarios: (a.beneficiarios ?? []).map(beneficiario),
           pagos: pagos(datos.pagosPlan),
         },

@@ -45,6 +45,7 @@ export async function actualizarVistaAfiliado(dep: DependenciasVista, afiliadoId
     construirVistaAfiliado({
       afiliado,
       nombrePlan: plan?.nombre ?? null,
+      beneficiosGuardados: plan?.beneficios,
       pagosPlan,
       pagosSeguro,
       servicios: [...servicios.values()],

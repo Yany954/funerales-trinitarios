@@ -54,3 +54,11 @@ describe("tipos compartidos backend ↔ app", () => {
     assert.equal(app, backend, "Copia backend/src/domain/entities/vista-afiliado.ts a mobile/src/vista/tipos.ts");
   });
 });
+
+describe("beneficios de los planes backend ↔ dashboard", () => {
+  it("frontend/src/utils/beneficiosPlan.ts es copia exacta del backend", () => {
+    const backend = readFileSync(join(RAIZ, "backend/src/domain/value-objects/beneficios-plan.ts"), "utf8");
+    const web = readFileSync(join(RAIZ, "frontend/src/utils/beneficiosPlan.ts"), "utf8");
+    assert.equal(web, backend, "Copia backend/src/domain/value-objects/beneficios-plan.ts a frontend/src/utils/beneficiosPlan.ts");
+  });
+});

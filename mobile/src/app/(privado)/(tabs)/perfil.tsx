@@ -116,7 +116,7 @@ export default function Perfil() {
             <Tarjeta>
               <FormularioCelular key={v.celular ?? ""} inicial={v.celular ?? ""} />
             </Tarjeta>
-            {v.plan && <Boton titulo={t("plan.verContrato")} variante="secundario" onPress={() => router.push("/contrato")} />}
+            {v.plan && <Boton titulo={t("plan.verBeneficios")} variante="secundario" icono="ribbon-outline" onPress={() => router.push("/beneficios")} />}
             <Boton titulo={t("inicio.cerrarSesion")} variante="peligro" icono="log-out-outline" onPress={confirmarCerrar} />
           </Pantalla>
         );

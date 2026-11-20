@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { collection, collectionGroup, getCountFromServer, onSnapshot, query, where } from "firebase/firestore";
-import { Plus, Pencil, X, Save, TrendingUp, TrendingDown, Users, CalendarClock, Info } from "lucide-react";
+import { Plus, Pencil, X, Save, TrendingUp, TrendingDown, Users, CalendarClock, Info, ListChecks, Check } from "lucide-react";
+import { beneficiosDelPlan, beneficiosPredeterminados } from "../utils/beneficiosPlan";
 import { db, crearPlan, actualizarPlan, guardarPrecioAnioPlan } from "../api/client";
 import CampoPrecio from "../components/CampoPrecio";
 import { BarraDistribucion } from "../components/BarraSegmentada";
@@ -24,6 +25,7 @@ export default function Planes() {
 
   const [modalPlan, setModalPlan] = useState<{ plan: PlanFunerario | null } | null>(null);
   const [modalPrecio, setModalPrecio] = useState<{ plan: PlanFunerario; anio: string } | null>(null);
+  const [modalBeneficios, setModalBeneficios] = useState<PlanFunerario | null>(null);
 
   useEffect(() => {
     return onSnapshot(
@@ -113,6 +115,7 @@ export default function Planes() {
             afiliados={afiliadosPorPlan[p.id]}
             onRenombrar={() => setModalPlan({ plan: p })}
             onPrecio={(anio) => setModalPrecio({ plan: p, anio })}
+            onBeneficios={() => setModalBeneficios(p)}
           />
         ))}
         {carga.cargando && <p className="text-sm text-tinta/70">Cargando…</p>}
@@ -125,6 +128,7 @@ export default function Planes() {
       </section>
 
       {modalPlan && <ModalPlan plan={modalPlan.plan} onCerrar={() => setModalPlan(null)} />}
+      {modalBeneficios && <ModalBeneficios plan={modalBeneficios} onCerrar={() => setModalBeneficios(null)} />}
       {modalPrecio && (
         <ModalPrecio plan={modalPrecio.plan} historial={historialDe(modalPrecio.plan.id)} anioInicial={modalPrecio.anio} onCerrar={() => setModalPrecio(null)} />
       )}
@@ -138,13 +142,17 @@ function TarjetaPlan({
   afiliados,
   onRenombrar,
   onPrecio,
+  onBeneficios,
 }: {
   plan: PlanFunerario;
   historial: HistorialPrecioPlan[];
   afiliados: number | undefined;
   onRenombrar: () => void;
   onPrecio: (anio: string) => void;
+  onBeneficios: () => void;
 }) {
+  const beneficios = beneficiosDelPlan(plan.nombre, plan.beneficios);
+  const editados = (plan.beneficios ?? []).length > 0;
   const vigente = historial[0];
   const anterior = historial[1];
   const cambio = vigente && anterior && anterior.valorMensual > 0 ? ((vigente.valorMensual - anterior.valorMensual) / anterior.valorMensual) * 100 : null;
@@ -211,6 +219,30 @@ function TarjetaPlan({
           </ol>
         </div>
       )}
+
+      <div className="mt-4">
+        <p className="mb-2 flex items-center justify-between gap-2 text-xs font-medium text-tinta/70">
+          <span className="flex items-center gap-1"><ListChecks size={13} aria-hidden="true" /> Beneficios ({beneficios.length})</span>
+          <span className="font-normal">{beneficios.length === 0 ? "sin definir" : editados ? "editados" : "de la hoja"}</span>
+        </p>
+        {beneficios.length === 0 ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Sin beneficios: en la app los afiliados verán "pregunta en tu sede".
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {beneficios.slice(0, 3).map((b) => (
+              <li key={b} className="flex items-start gap-1.5 text-sm text-tinta">
+                <Check size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-green-700" /> {b}
+              </li>
+            ))}
+            {beneficios.length > 3 && <li className="pl-5 text-xs text-tinta/60">y {beneficios.length - 3} más…</li>}
+          </ul>
+        )}
+        <button onClick={onBeneficios} className="mt-2 text-sm font-medium text-vino-700 hover:underline">
+          Ver y editar beneficios
+        </button>
+      </div>
 
       <div className="mt-auto pt-5">
         <button
@@ -377,6 +409,94 @@ function ModalPrecio({
               <Save size={16} aria-hidden="true" />
               {guardando ? "Guardando…" : "Guardar precio"}
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Beneficios del plan, uno por línea. Es lo que ve cada afiliado del plan en
+ * la app ("Ver beneficios de mi plan"). Si se deja vacío, se vuelve a los de
+ * la hoja de la empresa (o a "pregunta en tu sede" si el plan no está en ella).
+ */
+function ModalBeneficios({ plan, onCerrar }: { plan: PlanFunerario; onCerrar: () => void }) {
+  const refDialogo = useDialogo(onCerrar);
+  const [texto, setTexto] = useState(beneficiosDelPlan(plan.nombre, plan.beneficios).join("\n"));
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const deLaHoja = beneficiosPredeterminados(plan.nombre);
+  const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  async function guardar(beneficios: string[]) {
+    setError(null);
+    setGuardando(true);
+    try {
+      await actualizarPlan({ id: plan.id, beneficios });
+      onCerrar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudieron guardar los beneficios.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
+      <div ref={refDialogo} role="dialog" aria-modal="true" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-vino-700">{plan.nombre}</p>
+            <h2 className="font-display text-xl text-vino-900">Beneficios del plan</h2>
+          </div>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="rounded-lg p-1.5 text-tinta/70 hover:bg-vino-50 hover:text-tinta">
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void guardar(lineas);
+          }}
+          className="space-y-4"
+        >
+          <p className="flex items-start gap-1.5 rounded-lg bg-vino-50 px-3 py-2 text-xs text-vino-900">
+            <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+            Escribe un beneficio por línea. Es lo que ven los afiliados de este plan en la app, en "Ver beneficios de mi plan".
+          </p>
+          <div>
+            <label htmlFor="plan-beneficios" className="mb-1 flex justify-between text-sm font-medium">
+              <span>Beneficios y condiciones</span>
+              <span className="font-normal text-tinta/60">{lineas.length} líneas</span>
+            </label>
+            <textarea
+              id="plan-beneficios"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              rows={16}
+              className="w-full rounded-lg border border-vino-100 px-3 py-2 text-sm leading-relaxed"
+              placeholder={"Cofre forrado.\nTraslado local e intermunicipal.\n…"}
+            />
+          </div>
+          {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {deLaHoja ? (
+              <button type="button" onClick={() => setTexto(deLaHoja.join("\n"))} className="text-left text-sm font-medium text-vino-700 hover:underline">
+                Volver a los de la hoja de la empresa
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <button type="button" onClick={onCerrar} className="min-h-[44px] rounded-lg border border-vino-100 px-4 text-sm font-medium text-tinta/70 hover:bg-vino-50">
+                Cancelar
+              </button>
+              <button type="submit" disabled={guardando} className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-vino-700 px-5 text-sm font-medium text-white transition hover:bg-vino-600 active:translate-y-px disabled:opacity-60">
+                <Save size={16} aria-hidden="true" />
+                {guardando ? "Guardando…" : "Guardar beneficios"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

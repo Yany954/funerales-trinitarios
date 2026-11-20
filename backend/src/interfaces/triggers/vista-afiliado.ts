@@ -55,6 +55,17 @@ export const vistaPorPagoSeguroFn = onDocumentWritten(`${COLECCION_PAGOS_SEGURO}
   await refrescar([antes?.afiliadoId, despues?.afiliadoId]);
 });
 
+/** Si editan los beneficios (o el nombre) de un plan, se actualiza la app de sus afiliados. */
+export const vistaPorPlanFn = onDocumentWritten("planes_funerarios/{planId}", async (event) => {
+  const { antes, despues } = antesYDespues(event);
+  const mismoContenido =
+    antes && despues && antes.nombre === despues.nombre && JSON.stringify(antes.beneficios ?? []) === JSON.stringify(despues.beneficios ?? []);
+  if (mismoContenido) return; // p. ej. solo cambió el precio: la vista no lo muestra
+  const ids = await dependenciasVista.afiliados.listarIdsPorPlan(event.params.planId);
+  // actualizarVistaAfiliado no escribe nada para quien no tiene cuenta en la app.
+  await refrescar(ids);
+});
+
 export const vistaPorServicioFn = onDocumentWritten("servicios/{servicioId}", async (event) => {
   const { antes, despues } = antesYDespues(event);
   const ids: (string | undefined)[] = [antes?.afiliadoId, despues?.afiliadoId];

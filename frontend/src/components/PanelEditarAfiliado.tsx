@@ -4,7 +4,6 @@ import { X, Save } from "lucide-react";
 import { actualizarAfiliado, guardarSeguroVida } from "../api/client";
 import CamposSeguroVida, { leerSeguroDeForm } from "./CamposSeguroVida";
 import CampoPrecio from "./CampoPrecio";
-import SubirDocumento from "./SubirDocumento";
 import { confirmarAccion } from "../utils/confirmar";
 import type { Afiliado, PlanFunerario } from "../types";
 import { UBICACIONES_POR_SEDE, EDAD_MAXIMA_TITULAR_SEGURO } from "../types";
@@ -28,7 +27,6 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
   // Activar un seguro que nunca tuvo pide precio, beneficiario y primer pago.
   const activandoSeguroNuevo = conSeguro && !afiliado.seguroVida;
   const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState(afiliado.ubicacion ?? afiliado.vereda ?? "");
-  const [contratoFotos, setContratoFotos] = useState<string[]>(afiliado.contratoFotos ?? []);
 
   async function manejarGuardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,7 +59,6 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
         fechaNacimiento: String(form.get("fechaNacimiento") || "") || undefined,
         valorCuotaMensual: Number(form.get("valorCuotaMensual")),
         celular: String(form.get("celular") ?? "").trim(),
-        contratoFotos,
         tieneSeguroVida: conSeguro,
       });
       if (seguroNuevo) {
@@ -112,10 +109,6 @@ export default function PanelEditarAfiliado({ afiliado, planes, onCerrar }: Prop
           {conSeguro && afiliado.seguroVida && (
             <p className="text-xs text-tinta/70">Los datos y pagos del seguro se editan en la página Seguros de vida.</p>
           )}
-          <div className="space-y-1">
-            <p className="text-xs text-tinta/70">Fotos del contrato (el titular las ve en la app)</p>
-            <SubirDocumento carpeta={`afiliados/${afiliado.sede}/${afiliado.id}/contrato`} documentos={contratoFotos} onCambiar={setContratoFotos} />
-          </div>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={guardando} className="flex w-full items-center justify-center gap-2 rounded-lg bg-vino-700 py-2.5 text-sm font-medium text-white hover:bg-vino-600 disabled:opacity-60">
             <Save size={16} />

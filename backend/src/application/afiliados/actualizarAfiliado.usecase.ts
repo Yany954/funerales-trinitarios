@@ -18,7 +18,6 @@ export interface ActualizarAfiliadoInput {
   ubicacion?: string; // "" = quitar (queda la sede)
   observaciones?: string;
   celular?: string; // "" = quitar
-  contratoFotos?: string[];
 }
 
 export async function actualizarAfiliado(

@@ -85,7 +85,7 @@ const es = {
     alDia: "Estás al día hasta el {{fecha}}.",
     enMora: "Tu pago venció el {{fecha}}. Acércate a tu sede para ponerte al día.",
     inactivo: "Tu plan está inactivo. Acércate a tu sede para más información.",
-    verContrato: "Ver mi contrato",
+    verBeneficios: "Ver beneficios de mi plan",
     verServicios: "Servicios usados",
   },
   seguro: {
@@ -125,12 +125,13 @@ const es = {
     tipoPago: { afiliado: "Cubierto por tu plan", convenio_alcaldia: "Por convenio", pendiente: "Pago por definir" },
     tipo: { traslado: "Traslado", "servicio completo": "Servicio completo", "traslado + servicio completo": "Traslado + servicio completo" },
   },
-  contrato: {
-    titulo: "Mi contrato",
-    numero: "Contrato n.º {{numero}}",
-    noDisponible: "Tu contrato todavía no está disponible en la app. Pídelo en tu sede para que lo suban.",
-    foto: "Foto {{n}} del contrato",
-    ampliar: "Toca la foto para verla en grande.",
+  beneficios: {
+    titulo: "Beneficios de tu plan",
+    plan: "Plan {{nombre}}",
+    contrato: "Contrato n.º {{numero}}",
+    intro: "Esto es lo que cubre tu plan y las condiciones para usarlo.",
+    sinInfo: "Todavía no tenemos los beneficios de tu plan en la app. Pregunta en tu sede por los beneficios de tu plan.",
+    dudas: "¿Tienes dudas sobre tu plan? Acércate a tu sede.",
   },
   perfil: {
     titulo: "Mi perfil",

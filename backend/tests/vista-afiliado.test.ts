@@ -136,3 +136,27 @@ describe("perfil: lo único que el titular puede cambiar", () => {
     await assert.rejects(actualizarPerfilAfiliado(repo, archivos, "af1", { celular: "123" }, meta), /10 números/);
   });
 });
+
+describe("beneficios del plan", () => {
+  it("cada plan de la hoja trae lo suyo primero y luego lo común", async () => {
+    const { beneficiosDelPlan, BENEFICIOS_COMUNES } = await import("../src/domain/value-objects/beneficios-plan");
+    const girasol = beneficiosDelPlan("Girasol", undefined);
+    assert.equal(girasol[0], "Cofre forrado.");
+    assert.ok(girasol.includes("No cubre traslado a nivel nacional."));
+    assert.ok(beneficiosDelPlan("Plan Alianza", []).includes("Cubre el 20 % del traslado a nivel nacional."));
+    assert.ok(beneficiosDelPlan("BENDICIÓN", null).some((b) => b.includes("(por 2 años)")));
+    assert.equal(girasol.length, 3 + BENEFICIOS_COMUNES.length);
+  });
+
+  it("los editados en el dashboard tienen prioridad; un plan desconocido no trae nada", async () => {
+    const { beneficiosDelPlan } = await import("../src/domain/value-objects/beneficios-plan");
+    assert.deepEqual(beneficiosDelPlan("Girasol", ["  Solo esto  ", ""]), ["Solo esto"]);
+    assert.deepEqual(beneficiosDelPlan("Integral", undefined), []);
+  });
+
+  it("la vista del titular incluye los beneficios de su plan", () => {
+    const v = construirVistaAfiliado({ afiliado: afiliado(), nombrePlan: "Bendiciones", pagosPlan: [], pagosSeguro: [], servicios: [] });
+    assert.equal(v.plan!.beneficios[0], "Cofre tipo plan especial.");
+    assert.ok(!("contratoFotos" in v));
+  });
+});

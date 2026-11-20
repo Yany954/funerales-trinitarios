@@ -19,4 +19,6 @@ export interface AfiliadosRepository {
   eliminar(id: string): Promise<void>;
   /** Titulares (con plan o solo seguro) cuya cédula coincide, sin importar puntos o espacios. */
   buscarTitularesPorCedula(cedula: string): Promise<Afiliado[]>;
+  /** Ids de los afiliados de un plan. */
+  listarIdsPorPlan(planId: string): Promise<string[]>;
 }

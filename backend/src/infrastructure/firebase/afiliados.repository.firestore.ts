@@ -252,4 +252,10 @@ export class AfiliadosRepositoryFirestore implements AfiliadosRepository {
     const afiliados = await Promise.all([...ids].map((id) => this.obtenerPorId(id)));
     return afiliados.filter((a): a is Afiliado => a !== null && normalizarCedula(a.cedula) === normalizada);
   }
+
+  async listarIdsPorPlan(planId: string): Promise<string[]> {
+    // select(): solo los ids, sin descargar los documentos completos.
+    const snap = await db.collection(AFILIADOS).where("planId", "==", planId).select().get();
+    return snap.docs.map((d) => d.id);
+  }
 }
